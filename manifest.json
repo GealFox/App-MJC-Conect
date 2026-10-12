@@ -2,7 +2,7 @@
   "name": "MJC Conect",
   "short_name": "MJC Conect",
   "description": "MJC Conect - Conectando personas",
-  "start_url": "./mjc-conect.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
