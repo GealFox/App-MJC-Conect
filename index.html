@@ -899,10 +899,10 @@
       <div class="modal-content" style="text-align: center;">
         <div style="font-size: 2.8rem; margin-bottom: 0.4rem;">🗑️</div>
         <div class="modal-title" style="margin-bottom: 0.4rem;">¿Eliminar Registro?</div>
-        <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.25rem;">Esta acción borrará el registro únicamente de este dispositivo local.</p>
+        <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.25rem;">Esta acción borrará el registro de tu teléfono y de la nube (Google Sheets).</p>
         <div style="display: flex; gap: 0.75rem;">
           <button type="button" class="btn btn-secondary" onclick="appRecordsView.closeDeleteModal()">Cancelar</button>
-          <button type="button" class="btn btn-primary" style="background: var(--danger);" onclick="appRecordsView.confirmDelete()">Eliminar</button>
+          <button type="button" class="btn btn-primary" style="background: var(--danger);" onclick="appRecordsView.confirmDelete()">Sí, Eliminar</button>
         </div>
       </div>
     </div>
@@ -1915,6 +1915,9 @@
           return mNombre && mApellido && mProv && mPart && mLoc;
         });
 
+        // Ordenamos para que los nuevos registros salgan arriba
+        this.filteredRecords.sort((a,b) => new Date(b.fechaRegistro) - new Date(a.fechaRegistro));
+
         this.renderList(this.filteredRecords);
       },
 
@@ -1973,14 +1976,53 @@
         document.getElementById('modal-confirm-delete').classList.remove('active');
       },
 
+      // ESTA ES LA FUNCIÓN CORREGIDA PARA QUE HABLE CON LA NUBE AL BORRAR
       async confirmDelete() {
-        if (this.pendingDeleteId) {
-          await LocalDB.deleteRecord(this.pendingDeleteId);
-          this.closeDeleteModal();
+        if (!this.pendingDeleteId) return;
+        
+        const idToDelete = this.pendingDeleteId;
+        this.closeDeleteModal();
+
+        // Si no hay red, lo borramos de la vista local nada más
+        if (!navigator.onLine) {
+          await LocalDB.deleteRecord(idToDelete);
+          appToast.show('Borrado localmente (Sin conexión a la nube).', 'info');
           await this.loadAndRender();
           appSync.updatePendingUI();
-          appToast.show('Registro eliminado.', 'info');
+          return;
         }
+
+        // Si hay red, mandamos la orden de borrar a Google Sheets
+        try {
+          appToast.show('Enviando orden de borrado a Google Sheets...', 'info');
+          
+          const response = await fetch(API_CONFIG.webAppUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ 
+              action: 'deleteRecord', 
+              id: idToDelete 
+            })
+          });
+          
+          const result = await response.json();
+          
+          // Revisamos si Google Sheets confirma que lo borró
+          if (result.status === 'success') {
+            await LocalDB.deleteRecord(idToDelete); // Borramos del teléfono
+            appToast.show('¡Registro eliminado completamente de la base!', 'success');
+          } else {
+            appToast.show('La nube rechazó la orden. ¿Actualizaste la "Nueva Versión" del script?', 'error');
+          }
+        } catch (err) {
+          console.warn('Error al borrar en la nube:', err);
+          appToast.show('Hubo un error de conexión con la planilla.', 'error');
+        }
+
+        // Recargamos la pantalla
+        await this.loadAndRender();
+        appSync.updatePendingUI();
       }
     };
 
