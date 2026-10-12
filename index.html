@@ -54,6 +54,7 @@
       color: var(--text-dark);
       display: flex;
       justify-content: center;
+      align-items: flex-start;
       min-height: 100vh;
       line-height: 1.4;
       overflow-x: hidden;
@@ -68,6 +69,46 @@
       flex-direction: column;
       position: relative;
       box-shadow: 0 0 40px rgba(0,0,0,0.04);
+      transition: var(--transition);
+    }
+
+    /* ADAPTACIÓN PARA ESCRITORIO / MONITORES GRANDES */
+    @media (min-width: 768px) {
+      body {
+        padding: 2rem 1rem;
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      }
+
+      .app-container {
+        max-width: 768px;
+        min-height: calc(100vh - 4rem);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+
+      .form-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      .filter-grid-desktop {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+
+      .records-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 0.85rem;
+      }
+
+      .stat-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+      }
     }
 
     /* ==========================================
@@ -200,7 +241,7 @@
     .view-screen {
       display: none;
       flex: 1;
-      padding: 1rem;
+      padding: 1.25rem;
       animation: screenFadeIn 0.22s ease-out forwards;
       flex-direction: column;
     }
@@ -429,7 +470,7 @@
     .modal-content {
       background: var(--surface);
       width: 100%;
-      max-width: 400px;
+      max-width: 440px;
       border-radius: var(--radius-lg);
       padding: 1.35rem 1.25rem;
       box-shadow: var(--shadow-lg);
@@ -717,6 +758,20 @@
     <!-- 1. PANTALLA PRINCIPAL (HOME) -->
     <div id="screen-home" class="view-screen active" style="justify-content: center;">
       
+      <!-- TARJETA PROMPT DE INSTALACIÓN PWA -->
+      <div id="install-banner" class="card" style="display: none; background: #eef2ff; border: 1.5px solid var(--primary);">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <img src="https://raw.githubusercontent.com/GealFox/App-MJC-Conect/refs/heads/main/icon-192.png" alt="Icono" style="width: 40px; height: 40px; object-fit: contain;">
+            <div>
+              <strong style="font-size: 0.95rem; color: var(--text-dark);">Instalar MJC Conect</strong>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Usá la app directamente en tu pantalla principal</div>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width: auto; min-height: 38px; padding: 0.4rem 0.85rem; font-size: 0.85rem;" onclick="appPWA.install()">Instalar</button>
+        </div>
+      </div>
+
       <!-- Tarjeta Estado Sincronización -->
       <div class="sync-card">
         <div class="sync-status-row">
@@ -749,30 +804,34 @@
 
       <form id="registration-form" onsubmit="appRegistration.handleSubmit(event)" novalidate>
         
-        <!-- Nombre (Obligatorio) -->
-        <div class="form-group" id="grp-nombre">
-          <label class="form-label" for="input-nombre">Nombre <span class="req">*</span></label>
-          <input type="text" id="input-nombre" class="form-input" placeholder="Ej.: Juan" autocomplete="off" onfocus="appFormHelper.autoFocusScroll(this)">
-          <div class="error-text">Por favor, ingresá el nombre.</div>
+        <div class="form-grid-2">
+          <!-- Nombre (Obligatorio) -->
+          <div class="form-group" id="grp-nombre">
+            <label class="form-label" for="input-nombre">Nombre <span class="req">*</span></label>
+            <input type="text" id="input-nombre" class="form-input" placeholder="Ej.: Juan" autocomplete="off" onfocus="appFormHelper.autoFocusScroll(this)">
+            <div class="error-text">Por favor, ingresá el nombre.</div>
+          </div>
+
+          <!-- Apellido (Opcional) -->
+          <div class="form-group" id="grp-apellido">
+            <label class="form-label" for="input-apellido">Apellido <span class="optional">(Opcional)</span></label>
+            <input type="text" id="input-apellido" class="form-input" placeholder="Ej.: Pérez" autocomplete="off" onfocus="appFormHelper.autoFocusScroll(this)">
+          </div>
         </div>
 
-        <!-- Apellido (Opcional) -->
-        <div class="form-group" id="grp-apellido">
-          <label class="form-label" for="input-apellido">Apellido <span class="optional">(Opcional)</span></label>
-          <input type="text" id="input-apellido" class="form-input" placeholder="Ej.: Pérez" autocomplete="off" onfocus="appFormHelper.autoFocusScroll(this)">
-        </div>
+        <div class="form-grid-2">
+          <!-- Contacto (Obligatorio) -->
+          <div class="form-group" id="grp-telefono">
+            <label class="form-label" for="input-telefono">Contacto / WhatsApp <span class="req">*</span></label>
+            <input type="tel" id="input-telefono" class="form-input" placeholder="Ej.: 11 1234 5678" inputmode="tel" onfocus="appFormHelper.autoFocusScroll(this)">
+            <div class="error-text">Por favor, ingresá el número de contacto.</div>
+          </div>
 
-        <!-- Contacto (Obligatorio) -->
-        <div class="form-group" id="grp-telefono">
-          <label class="form-label" for="input-telefono">Contacto / WhatsApp <span class="req">*</span></label>
-          <input type="tel" id="input-telefono" class="form-input" placeholder="Ej.: 11 1234 5678" inputmode="tel" onfocus="appFormHelper.autoFocusScroll(this)">
-          <div class="error-text">Por favor, ingresá el número de contacto.</div>
-        </div>
-
-        <!-- Edad (Opcional) -->
-        <div class="form-group" id="grp-edad">
-          <label class="form-label" for="input-edad">Edad <span class="optional">(Opcional)</span></label>
-          <input type="number" id="input-edad" class="form-input" placeholder="Ej.: 35" min="1" max="120" inputmode="numeric" onfocus="appFormHelper.autoFocusScroll(this)">
+          <!-- Edad (Opcional) -->
+          <div class="form-group" id="grp-edad">
+            <label class="form-label" for="input-edad">Edad <span class="optional">(Opcional)</span></label>
+            <input type="number" id="input-edad" class="form-input" placeholder="Ej.: 35" min="1" max="120" inputmode="numeric" onfocus="appFormHelper.autoFocusScroll(this)">
+          </div>
         </div>
 
         <!-- TARJETA DESPLEGABLE DE UBICACIÓN -->
@@ -824,7 +883,7 @@
       </div>
     </div>
 
-    <!-- MODAL POPUP: NOTIFICACIONES NATIVAS (Avisos/Aciertos/Errores) -->
+    <!-- MODAL POPUP: NOTIFICACIONES NATIVAS -->
     <div id="modal-msg" class="modal-overlay">
       <div class="modal-content" style="text-align: center;">
         <div id="msg-icon" style="font-size: 2.8rem; margin-bottom: 0.4rem;">ℹ️</div>
@@ -897,7 +956,7 @@
           <div class="modal-title">🔒 Acceso Administrador</div>
           <button type="button" class="btn-close-modal" onclick="appAdmin.closePinModal()">✕</button>
         </div>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">Ingresá la clave PIN validada en el servidor.</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Ingresá el PIN con los botones o mediante el teclado numérico.</p>
         
         <div class="pin-dots">
           <div class="pin-dot" id="dot-0"></div>
@@ -958,7 +1017,7 @@
         </div>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+      <div class="filter-grid-desktop" style="margin-bottom: 1rem;">
         <input type="text" id="filter-nombre" class="form-input" placeholder="Buscar por Nombre" oninput="appRecordsView.applyFilters()">
         <input type="text" id="filter-apellido" class="form-input" placeholder="Buscar por Apellido" oninput="appRecordsView.applyFilters()">
 
@@ -975,7 +1034,7 @@
         </select>
       </div>
 
-      <div id="records-container" style="flex: 1; overflow-y: auto;">
+      <div id="records-container" class="records-grid" style="flex: 1; overflow-y: auto;">
         <!-- Tarjetas dinámicas -->
       </div>
     </div>
@@ -983,7 +1042,7 @@
 
   <!-- ==========================================
      LÓGICA JAVASCRIPT MODULAR
-     ========================================== -->
+     ========================================== */ -->
   <script>
     /* ==========================================
        A. CONFIGURACIÓN GENERAL Y API
@@ -1036,7 +1095,41 @@
     ];
 
     /* ==========================================
-       B. SISTEMA DE NOTIFICACIONES EMERGENTES (POP NATIVO)
+       B. INSTALACIÓN PWA (PROMPT INSTALAR)
+       ========================================== */
+    const appPWA = {
+      deferredPrompt: null,
+
+      init() {
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          this.deferredPrompt = e;
+          const banner = document.getElementById('install-banner');
+          if (banner) banner.style.display = 'block';
+        });
+
+        window.addEventListener('appinstalled', () => {
+          this.deferredPrompt = null;
+          const banner = document.getElementById('install-banner');
+          if (banner) banner.style.display = 'none';
+          appToast.show('¡Aplicación instalada con éxito!', 'success');
+        });
+      },
+
+      async install() {
+        if (!this.deferredPrompt) return;
+        this.deferredPrompt.prompt();
+        const { outcome } = await this.deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          const banner = document.getElementById('install-banner');
+          if (banner) banner.style.display = 'none';
+        }
+        this.deferredPrompt = null;
+      }
+    };
+
+    /* ==========================================
+       C. SISTEMA DE NOTIFICACIONES EMERGENTES
        ========================================== */
     const appToast = {
       modalEl: document.getElementById('modal-msg'),
@@ -1070,7 +1163,7 @@
     };
 
     /* ==========================================
-       C. HELPER DE NORMALIZACIÓN Y ID
+       D. HELPER DE NORMALIZACIÓN Y ID
        ========================================== */
     const IdGenerator = {
       generate() {
@@ -1092,7 +1185,7 @@
     }
 
     /* ==========================================
-       D. AUTENTICACIÓN ADMIN SERVIDOR
+       E. AUTENTICACIÓN ADMIN SERVIDOR Y TECLADO
        ========================================== */
     const appAdmin = {
       isAdmin: false,
@@ -1147,6 +1240,22 @@
         }
       },
 
+      // Capta el ingreso por teclado físico en escritorio
+      handleKeyDown(e) {
+        const modal = document.getElementById('modal-admin-pin');
+        if (!modal || !modal.classList.contains('active')) return;
+
+        if (e.key >= '0' && e.key <= '9') {
+          this.pressPin(e.key);
+        } else if (e.key === 'Backspace') {
+          this.deletePin();
+        } else if (e.key === 'Escape') {
+          this.closePinModal();
+        } else if (e.key.toLowerCase() === 'c') {
+          this.clearPin();
+        }
+      },
+
       async verifyPin() {
         if (!navigator.onLine) {
           const errEl = document.getElementById('pin-error-text');
@@ -1198,7 +1307,7 @@
     };
 
     /* ==========================================
-       E. MANEJO DE UBICACIÓN EMERGENTE
+       F. MANEJO DE UBICACIÓN EMERGENTE
        ========================================== */
     const appLocationModal = {
       modalEl: document.getElementById('modal-location'),
@@ -1340,7 +1449,7 @@
     };
 
     /* ==========================================
-       F. PERSISTENCIA INDEXEDDB Y SINCRONIZACIÓN
+       G. PERSISTENCIA INDEXEDDB Y SINCRONIZACIÓN
        ========================================== */
     const LocalDB = {
       db: null,
@@ -1487,7 +1596,7 @@
     };
 
     /* ==========================================
-       G. ESTADÍSTICAS Y EXPORTACIÓN EXCEL (.XLSX NATIVO)
+       H. ESTADÍSTICAS Y EXPORTACIÓN EXCEL (.XLSX NATIVO)
        ========================================== */
     const appStatsModal = {
       modalEl: document.getElementById('modal-stats'),
@@ -1596,7 +1705,7 @@
     };
 
     /* ==========================================
-       H. REGISTRO Y FORMULARIO
+       I. REGISTRO Y FORMULARIO
        ========================================== */
     const appFormHelper = {
       autoFocusScroll(element) {
@@ -1700,7 +1809,7 @@
     };
 
     /* ==========================================
-       I. INSPECCIÓN DE REGISTROS Y FILTROS
+       J. INSPECCIÓN DE REGISTROS Y FILTROS
        ========================================== */
     const appRecordsView = {
       allRecords: [],
@@ -1780,7 +1889,7 @@
         const container = document.getElementById('records-container');
 
         if (records.length === 0) {
-          container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:2rem;">No se encontraron registros.</div>`;
+          container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:2rem; grid-column: 1 / -1;">No se encontraron registros.</div>`;
           return;
         }
 
@@ -1828,7 +1937,7 @@
     };
 
     /* ==========================================
-       J. NAVEGACIÓN GENERAL
+       K. NAVEGACIÓN GENERAL
        ========================================== */
     const appNavigation = {
       screens: {
@@ -1850,17 +1959,23 @@
     };
 
     /* ==========================================
-       K. INICIALIZACIÓN Y SERVICE WORKER
+       L. INICIALIZACIÓN Y EVENTOS
        ========================================== */
     document.addEventListener('DOMContentLoaded', async () => {
-      // Registrar Service Worker para PWA
+      // Inicializar detector de instalación PWA
+      appPWA.init();
+
+      // Registrar Service Worker
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
-          .then((reg) => console.log('Service Worker registrado con éxito:', reg.scope))
-          .catch((err) => console.error('Error al registrar Service Worker:', err));
+          .then((reg) => console.log('Service Worker registrado:', reg.scope))
+          .catch((err) => console.error('Error Service Worker:', err));
       }
 
-      // Temporizador para desvanecer suavemente la Splash Screen
+      // Escuchador de teclado físico para el PIN Admin
+      window.addEventListener('keydown', (e) => appAdmin.handleKeyDown(e));
+
+      // Temporizador para la Splash Screen
       setTimeout(() => {
         const splash = document.getElementById('splash-screen');
         if (splash) splash.classList.add('fade-out');
