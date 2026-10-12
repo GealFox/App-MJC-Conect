@@ -993,7 +993,7 @@
       <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.4rem; margin-bottom: 1.8rem;">Los datos fueron guardados localmente.</p>
 
       <div style="width: 100%; display: flex; flex-direction: column; gap: 0.75rem;">
-        <button class="btn btn-primary" onclick="appRegistration.resetAndRegisterNew()">
+        <button class="btn btn-primary" onclick="appRegistration.resetAndRegisterNew(); appNavigation.showScreen('view-register')">
           Registrar otra persona
         </button>
         <button class="btn btn-secondary" onclick="appNavigation.showScreen('view-home')">
@@ -1976,7 +1976,7 @@
         document.getElementById('modal-confirm-delete').classList.remove('active');
       },
 
-      // ESTA ES LA FUNCIÓN CORREGIDA PARA QUE HABLE CON LA NUBE AL BORRAR
+      // FUNCIÓN CORREGIDA PARA QUE HABLE CON LA NUBE AL BORRAR
       async confirmDelete() {
         if (!this.pendingDeleteId) return;
         
