@@ -621,9 +621,9 @@
     .record-card {
       background: var(--surface);
       border-radius: var(--radius-md);
-      padding: 0.95rem;
+      padding: 1rem;
       border: 1px solid var(--border);
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.85rem;
       box-shadow: var(--shadow-sm);
     }
 
@@ -631,12 +631,14 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      margin-bottom: 0.35rem;
     }
 
     .record-name {
-      font-size: 1rem;
-      font-weight: 700;
+      font-size: 1.05rem;
+      font-weight: 800;
       color: var(--text-dark);
+      line-height: 1.2;
     }
 
     .record-id-tag {
@@ -649,17 +651,17 @@
     }
 
     .record-details {
-      font-size: 0.85rem;
+      font-size: 0.875rem;
+      font-weight: 600;
       color: var(--text-muted);
-      margin-top: 0.25rem;
+      margin-bottom: 0.35rem;
     }
 
     .record-location-tag {
       display: block;
-      font-size: 0.825rem;
+      font-size: 0.85rem;
       font-weight: 700;
       color: var(--primary);
-      margin-top: 0.35rem;
     }
 
     .btn-delete {
@@ -671,7 +673,6 @@
       cursor: pointer;
       font-size: 0.75rem;
       font-weight: 700;
-      margin-top: 0.5rem;
     }
 
     footer {
@@ -1491,7 +1492,7 @@
 
           cloudRecords.forEach(r => {
             r.sincronizado = true;
-            store.put(r); // Agrega o actualiza por ID
+            store.put(r);
           });
 
           tx.oncomplete = () => resolve(true);
@@ -1563,7 +1564,6 @@
         }
       },
 
-      // PUSH: Envía lo que hay pendiente al servidor
       async syncPendingRecords() {
         if (this.isSyncing) return;
         if (!navigator.onLine) {
@@ -1594,13 +1594,12 @@
             }
           }
 
-          // PULL: Descarga también los registros guardados desde otros dispositivos
           await this.pullFromCloud();
           appToast.show('Sincronización completa con la base de datos.', 'success');
 
         } catch (err) {
           console.warn('Error al sincronizar con Google Apps Script:', err);
-          appToast.show('Hubo un inconveniente al conectar con el servidor. Los datos locales están a salvo.', 'warning');
+          appToast.show('Hubo un inconveniente al conectar con el servidor.', 'warning');
         } finally {
           this.isSyncing = false;
           btn.innerText = '🔄 Sincronizar datos';
@@ -1608,7 +1607,6 @@
         }
       },
 
-      // PULL: Descarga los registros acumulados desde la planilla de Google
       async pullFromCloud() {
         if (!navigator.onLine) return;
         try {
@@ -1841,7 +1839,7 @@
     };
 
     /* ==========================================
-       J. INSPECCIÓN DE REGISTROS Y FILTROS
+       J. INSPECCIÓN DE REGISTROS Y FILTROS (DISEÑO Y FORMATO CORREGIDOS)
        ========================================== */
     const appRecordsView = {
       allRecords: [],
@@ -1849,7 +1847,6 @@
       pendingDeleteId: null,
 
       async loadAndRender() {
-        // Al entrar a Ver Registros, si hay red, se actualiza contra la nube
         if (navigator.onLine) {
           await appSync.pullFromCloud();
         }
@@ -1930,19 +1927,34 @@
         }
 
         container.innerHTML = records.map(r => {
-          const dateStr = new Date(r.fechaRegistro).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+          let dateStr = 'Sin fecha';
+          if (r.fechaRegistro) {
+            const parsedDate = new Date(r.fechaRegistro);
+            if (!isNaN(parsedDate.getTime())) {
+              dateStr = parsedDate.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+            }
+          }
+
           const u = r.ubicacion || {};
           const statusIcon = r.sincronizado ? '☁️ Sincronizado' : '📱 Local';
+
+          // Limpieza visual de Nombre, Apellido, Edad, Teléfono y Dirección
+          const nombreCompleto = `${r.nombre || ''} ${r.apellido || ''}`.trim() || 'Sin Nombre';
+          const edadText = (r.edad !== null && r.edad !== undefined && r.edad !== '' && !isNaN(r.edad)) ? `Edad: ${r.edad} años` : '';
+          const telText = r.telefono ? `Tel: ${r.telefono}` : '';
+          const detallesRow = [edadText, telText].filter(Boolean).join(' • ');
+
+          const direccionMostrar = u.direccionCompleta || u.direccionOriginal || 'Sin especificar';
 
           return `
             <div class="record-card">
               <div class="record-header">
-                <span class="record-name">${r.nombre} ${r.apellido}</span>
+                <span class="record-name">${nombreCompleto}</span>
                 <span class="record-id-tag">${r.id}</span>
               </div>
-              <div class="record-details">${r.edad ? `Edad: ${r.edad} años • ` : ''}Tel: ${r.telefono}</div>
-              <span class="record-location-tag">📍 ${u.direccionCompleta || 'Sin especificar'}</span>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.4rem;">
+              ${detallesRow ? `<div class="record-details">${detallesRow}</div>` : ''}
+              <span class="record-location-tag">📍 ${direccionMostrar}</span>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.6rem; padding-top:0.4rem; border-top:1px dashed var(--border);">
                 <span style="font-size:0.75rem; font-weight:700; color:${r.sincronizado ? '#166534' : '#9a3412'};">${statusIcon} • ${dateStr}</span>
                 <button class="btn-delete" onclick="appRecordsView.openDeleteModal('${r.id}')">Eliminar</button>
               </div>
@@ -2017,7 +2029,6 @@
       appRegistration.init();
       appSync.updatePendingUI();
 
-      // Al conectar automáticamente intenta sincronizar lo pendiente y descargar de la nube
       window.addEventListener('online', () => {
         appSync.updatePendingUI();
         appSync.syncPendingRecords();
