@@ -989,7 +989,7 @@
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text-dark);">✓ Registro realizado</h2>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.4rem; margin-bottom: 1.8rem;">Los datos fueron guardados en el teléfono.</p>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.4rem; margin-bottom: 1.8rem;">Los datos fueron guardados localmente.</p>
 
       <div style="width: 100%; display: flex; flex-direction: column; gap: 0.75rem;">
         <button class="btn btn-primary" onclick="appRegistration.resetAndRegisterNew()">
@@ -1484,6 +1484,21 @@
         });
       },
 
+      async saveBatchFromCloud(cloudRecords) {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([CONFIG.STORE_NAME], 'readwrite');
+          const store = tx.objectStore(CONFIG.STORE_NAME);
+
+          cloudRecords.forEach(r => {
+            r.sincronizado = true;
+            store.put(r); // Agrega o actualiza por ID
+          });
+
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = (e) => reject(e.target.error);
+        });
+      },
+
       async getAllRecords() {
         return new Promise((resolve, reject) => {
           const tx = this.db.transaction([CONFIG.STORE_NAME], 'readonly');
@@ -1548,6 +1563,7 @@
         }
       },
 
+      // PUSH: Envía lo que hay pendiente al servidor
       async syncPendingRecords() {
         if (this.isSyncing) return;
         if (!navigator.onLine) {
@@ -1556,40 +1572,59 @@
         }
 
         const pending = await LocalDB.getUnsyncedRecords();
-        if (pending.length === 0) {
-          appToast.show('No hay registros pendientes de envío.', 'info');
-          return;
-        }
-
         const btn = document.getElementById('btn-sync-now');
         btn.innerText = '⏳ Sincronizando...';
         this.isSyncing = true;
 
         try {
-          const response = await fetch(API_CONFIG.webAppUrl, {
-            method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-              action: 'syncRecords',
-              records: pending
-            })
-          });
+          if (pending.length > 0) {
+            const response = await fetch(API_CONFIG.webAppUrl, {
+              method: 'POST',
+              mode: 'cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({
+                action: 'syncRecords',
+                records: pending
+              })
+            });
 
-          if (response.ok) {
-            const syncedIds = pending.map(p => p.id);
-            await LocalDB.markAsSynced(syncedIds);
-            appToast.show(`${syncedIds.length} registro(s) sincronizado(s) con éxito en la planilla.`, 'success');
-          } else {
-            throw new Error('Respuesta del servidor no válida.');
+            if (response.ok) {
+              const syncedIds = pending.map(p => p.id);
+              await LocalDB.markAsSynced(syncedIds);
+            }
           }
+
+          // PULL: Descarga también los registros guardados desde otros dispositivos
+          await this.pullFromCloud();
+          appToast.show('Sincronización completa con la base de datos.', 'success');
+
         } catch (err) {
-          console.warn('Error al conectar con la API de Google:', err);
-          appToast.show('Hubo un inconveniente al enviar los datos. Permanecen guardados de forma segura.', 'warning');
+          console.warn('Error al sincronizar con Google Apps Script:', err);
+          appToast.show('Hubo un inconveniente al conectar con el servidor. Los datos locales están a salvo.', 'warning');
         } finally {
           this.isSyncing = false;
           btn.innerText = '🔄 Sincronizar datos';
           await this.updatePendingUI();
+        }
+      },
+
+      // PULL: Descarga los registros acumulados desde la planilla de Google
+      async pullFromCloud() {
+        if (!navigator.onLine) return;
+        try {
+          const response = await fetch(API_CONFIG.webAppUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'getRecords' })
+          });
+
+          const data = await response.json();
+          if (data.status === 'success' && Array.isArray(data.records)) {
+            await LocalDB.saveBatchFromCloud(data.records);
+          }
+        } catch (err) {
+          console.warn('Error al descargar registros de la nube:', err);
         }
       }
     };
@@ -1790,9 +1825,7 @@
             appSync.syncPendingRecords();
           }
 
-          // LIMPIEZA INMEDIATA TRAS GUARDAR
           this.resetAndRegisterNew();
-          
           appNavigation.showScreen('view-confirm');
         } catch (err) {
           appToast.show('Error al guardar el registro en la memoria local.', 'error');
@@ -1816,6 +1849,10 @@
       pendingDeleteId: null,
 
       async loadAndRender() {
+        // Al entrar a Ver Registros, si hay red, se actualiza contra la nube
+        if (navigator.onLine) {
+          await appSync.pullFromCloud();
+        }
         this.allRecords = await LocalDB.getAllRecords();
         this.populateFilterDropdowns();
         this.applyFilters();
@@ -1961,20 +1998,16 @@
        L. INICIALIZACIÓN Y EVENTOS
        ========================================== */
     document.addEventListener('DOMContentLoaded', async () => {
-      // Inicializar detector de instalación PWA
       appPWA.init();
 
-      // Registrar Service Worker
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
           .then((reg) => console.log('Service Worker registrado:', reg.scope))
           .catch((err) => console.error('Error Service Worker:', err));
       }
 
-      // Escuchador de teclado físico para el PIN Admin
       window.addEventListener('keydown', (e) => appAdmin.handleKeyDown(e));
 
-      // Temporizador para la Splash Screen
       setTimeout(() => {
         const splash = document.getElementById('splash-screen');
         if (splash) splash.classList.add('fade-out');
@@ -1984,7 +2017,11 @@
       appRegistration.init();
       appSync.updatePendingUI();
 
-      window.addEventListener('online', () => appSync.updatePendingUI());
+      // Al conectar automáticamente intenta sincronizar lo pendiente y descargar de la nube
+      window.addEventListener('online', () => {
+        appSync.updatePendingUI();
+        appSync.syncPendingRecords();
+      });
       window.addEventListener('offline', () => appSync.updatePendingUI());
     });
   </script>
