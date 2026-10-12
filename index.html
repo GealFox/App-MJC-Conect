@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="description" content="MJC Conect - Conectando personas">
+  <title>MJC Conect</title>
+
+  <!-- Favicon oficial -->
+  <link rel="icon" href="https://raw.githubusercontent.com/GealFox/App-MJC-Conect/refs/heads/main/MJC-Logo.png">
+
+  <!-- Manifest PWA -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Librería Oficial para Exportación Nativa de Archivos .XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* ==========================================
+       1. VARIABLES Y ERGONOMÍA ESTILO APP
+       ========================================== */
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --accent: #f97316;
+      --bg-main: #f8fafc;
+      --surface: #ffffff;
+      --text-dark: #0f172a;
+      --text-muted: #64748b;
+      --border: #cbd5e1;
+      --danger: #ef4444;
+      --success: #10b981;
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 18px -2px rgba(79, 70, 229, 0.12);
+      --shadow-lg: 0 16px 36px -6px rgba(0, 0, 0, 0.22);
+      --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-dark);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      line-height: 1.4;
+      overflow-x: hidden;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 440px;
+      min-height: 100vh;
+      background: var(--bg-main);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 0 40px rgba(0,0,0,0.04);
+    }
+
+    /* ==========================================
+       2. PANTALLA DE INICIO (SPLASH SCREEN)
+       ========================================== */
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #ffffff;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3rem 1.5rem;
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.5s ease;
+    }
+
+    #splash-screen.fade-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-top: auto;
+      margin-bottom: auto;
+      animation: splashPop 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .splash-logo {
+      width: 110px;
+      height: 110px;
+      object-fit: contain;
+      margin-bottom: 1.25rem;
+      filter: drop-shadow(0 10px 20px rgba(79, 70, 229, 0.18));
+    }
+
+    .splash-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      letter-spacing: -0.02em;
+    }
+
+    .splash-credits {
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      opacity: 0.85;
+      animation: fadeIn 1s ease-out;
+    }
+
+    @keyframes splashPop {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 0.85; }
+    }
+
+    /* ==========================================
+       3. CABECERA
+       ========================================== */
+    header {
+      padding: 0.95rem 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .brand-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .brand-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text-dark);
+    }
+
+    .admin-pill {
+      font-size: 0.75rem;
+      background: #e0e7ff;
+      color: var(--primary);
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .view-screen {
+      display: none;
+      flex: 1;
+      padding: 1rem;
+      animation: screenFadeIn 0.22s ease-out forwards;
+      flex-direction: column;
+    }
+
+    .view-screen.active {
+      display: flex;
+    }
+
+    @keyframes screenFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ==========================================
+       4. BOTONES Y TARJETAS estilo NATIVO
+       ========================================== */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.1rem;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      width: 100%;
+      min-height: 52px;
+      padding: 0.85rem 1.1rem;
+      border-radius: var(--radius-md);
+      font-size: 1.05rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.97);
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: var(--text-dark);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--border);
+      color: var(--text-dark);
+      min-height: 42px;
+    }
+
+    .btn-outline:active {
+      background: #f1f5f9;
+    }
+
+    .sync-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.1rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .sync-status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: 20px;
+    }
+
+    .status-badge.online {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .status-badge.offline {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .pending-count-text {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    /* ==========================================
+       5. FORMULARIO VERTICAL TÁCTIL
+       ========================================== */
+    .form-group {
+      margin-bottom: 0.85rem;
+      position: relative;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 0.3rem;
+    }
+
+    .form-label span.req {
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .form-label span.optional {
+      font-weight: 500;
+      color: var(--text-muted);
+      font-size: 0.775rem;
+    }
+
+    .form-input {
+      width: 100%;
+      min-height: 48px;
+      padding: 0.75rem 0.95rem;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-size: 1rem;
+      color: var(--text-dark);
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    .error-text {
+      color: var(--danger);
+      font-size: 0.775rem;
+      margin-top: 0.25rem;
+      display: none;
+      font-weight: 600;
+    }
+
+    .form-group.has-error .form-input {
+      border-color: var(--danger);
+    }
+
+    .form-group.has-error .error-text {
+      display: block;
+    }
+
+    .location-trigger-card {
+      background: #f1f5f9;
+      border: 1.5px dashed var(--primary);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: var(--transition);
+      margin-bottom: 1rem;
+    }
+
+    .location-trigger-card:active {
+      background: var(--primary-light);
+    }
+
+    .location-trigger-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .location-trigger-sub {
+      font-size: 0.8rem;
+      color: var(--text-dark);
+      margin-top: 0.15rem;
+      font-weight: 600;
+    }
+
+    /* ==========================================
+       6. SISTEMA DE MODALES Y POPUPS ("POPS")
+       ========================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(5px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      animation: fadeIn 0.18s ease-out;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--surface);
+      width: 100%;
+      max-width: 400px;
+      border-radius: var(--radius-lg);
+      padding: 1.35rem 1.25rem;
+      box-shadow: var(--shadow-lg);
+      animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    @keyframes modalSlideUp {
+      from { transform: translateY(30px) scale(0.95); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.1rem;
+    }
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-dark);
+    }
+
+    .btn-close-modal {
+      background: #f1f5f9;
+      border: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      font-weight: 800;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border: 2px solid var(--primary);
+      border-radius: var(--radius-md);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 250;
+      box-shadow: var(--shadow-lg);
+      margin-top: 0.25rem;
+      display: none;
+    }
+
+    .autocomplete-item {
+      padding: 0.85rem 1rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s ease;
+    }
+
+    .autocomplete-item:hover, .autocomplete-item:active {
+      background: var(--primary-light);
+    }
+
+    .item-main {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-dark);
+    }
+
+    .item-sub {
+      font-size: 0.775rem;
+      color: var(--text-muted);
+    }
+
+    /* ESTADÍSTICAS */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.85rem;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 0.15rem;
+    }
+
+    .stat-list {
+      background: #f8fafc;
+      border-radius: var(--radius-md);
+      padding: 0.85rem;
+      border: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+
+    .stat-list-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.35rem 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .stat-list-item:last-child {
+      border-bottom: none;
+    }
+
+    /* REGISTROS */
+    .confirm-screen {
+      text-align: center;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1.25rem;
+    }
+
+    .success-icon {
+      width: 76px;
+      height: 76px;
+      background: #d1fae5;
+      color: var(--success);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem auto;
+    }
+
+    .record-card {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      padding: 0.95rem;
+      border: 1px solid var(--border);
+      margin-bottom: 0.75rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .record-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .record-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .record-id-tag {
+      font-family: monospace;
+      font-size: 0.725rem;
+      background: #f1f5f9;
+      color: var(--text-muted);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    .record-details {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .record-location-tag {
+      display: block;
+      font-size: 0.825rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 0.35rem;
+    }
+
+    .btn-delete {
+      background: #fee2e2;
+      color: var(--danger);
+      border: none;
+      padding: 0.35rem 0.65rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-top: 0.5rem;
+    }
+
+    footer {
+      margin-top: auto;
+      padding: 0.85rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* TECLADO PIN */
+    .pin-dots {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin: 1.25rem 0;
+    }
+
+    .pin-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      transition: var(--transition);
+    }
+
+    .pin-dot.filled {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+
+    .keypad-btn {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .keypad-btn:active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA DE BIENVENIDA (SPLASH SCREEN) -->
+  <div id="splash-screen">
+    <div class="splash-center">
+      <img src="https://raw.githubusercontent.com/GealFox/App-MJC-Conect/refs/heads/main/MJC-Logo.png" alt="MJC Conect Logo" class="splash-logo">
+      <h1 class="splash-title">MJC Conect</h1>
+    </div>
+    <div class="splash-credits">Creado por Gonzalo Abregú</div>
+  </div>
+
+  <div class="app-container">
+    <!-- CABECERA DE NAVEGACIÓN -->
+    <header>
+      <div class="brand">
+        <div class="brand-logo">
+          <img src="https://raw.githubusercontent.com/GealFox/App-MJC-Conect/refs/heads/main/MJC-Logo.png" alt="MJC Logo">
+        </div>
+        <span class="brand-title">MJC Conect</span>
+        <div id="admin-indicator" class="admin-pill">🔒 Admin</div>
+      </div>
+      <button class="btn btn-outline" id="nav-records-btn" style="width: auto; padding: 0.4rem 0.75rem; font-size: 0.85rem;" onclick="appAdmin.handleRecordsClick()">Registros</button>
+    </header>
+
+    <!-- 1. PANTALLA PRINCIPAL (HOME) -->
+    <div id="screen-home" class="view-screen active" style="justify-content: center;">
+      
+      <!-- Tarjeta Estado Sincronización -->
+      <div class="sync-card">
+        <div class="sync-status-row">
+          <span class="pending-count-text" id="sync-pending-text">Envíos pendientes: 0</span>
+          <span id="sync-network-badge" class="status-badge online">🟢 Conectado</span>
+        </div>
+        <button id="btn-sync-now" class="btn btn-outline" style="min-height: 40px; font-size: 0.875rem;" onclick="appSync.syncPendingRecords()">
+          🔄 Sincronizar datos
+        </button>
+      </div>
+
+      <!-- Tarjeta Acción Principal -->
+      <div class="card">
+        <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Completá los datos para registrar a una persona durante la campaña.</p>
+        <button class="btn btn-primary" onclick="appNavigation.showScreen('view-register')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Registrar persona
+        </button>
+      </div>
+
+      <footer>MJC Conect V1.0 • Modo Local</footer>
+    </div>
+
+    <!-- 2. FORMULARIO COMPACTO DE REGISTRO -->
+    <div id="screen-register" class="view-screen">
+      <div style="margin-bottom: 0.75rem;">
+        <button class="btn btn-outline" onclick="appNavigation.showScreen('view-home')" style="width: auto; padding: 0.35rem 0.75rem; font-size: 0.825rem;">← Volver</button>
+        <h2 style="font-size: 1.35rem; font-weight: 800; margin-top: 0.5rem;">Nuevo Registro</h2>
+      </div>
+
+      <form id="registration-form" onsubmit="appRegistration.handleSubmit(event)" novalidate>
+        
+        <!-- Nombre (Obligatorio) -->
+        <div class="form-group" id="grp-nombre">
+          <label class="form-label" for="input-nombre">Nombre <span class="req">*</span></label>
+          <input type="text" id="input-nombre" class="form-input" placeholder="Ej.: Juan" autocomplete="off" onfocus="appFormHelper.autoFocusScroll(this)">
+          <div class="error-text">Por favor, ingresá el nombre.</div>
+        </div>
+
+        <!-- Apellido (Opcional) -->
+        <div class="form-group" id="grp-apellido">
+          <label class="form-label" for="input-apellido">Apellido <span class="optional">(Opcional)</span></label>
+          <input type="text" id="input-apellido" class="form-input" placeholder="Ej.: Pérez" autocomplete="off" onfocus="appFormHelper.autoFocusScroll(this)">
+        </div>
+
+        <!-- Contacto (Obligatorio) -->
+        <div class="form-group" id="grp-telefono">
+          <label class="form-label" for="input-telefono">Contacto / WhatsApp <span class="req">*</span></label>
+          <input type="tel" id="input-telefono" class="form-input" placeholder="Ej.: 11 1234 5678" inputmode="tel" onfocus="appFormHelper.autoFocusScroll(this)">
+          <div class="error-text">Por favor, ingresá el número de contacto.</div>
+        </div>
+
+        <!-- Edad (Opcional) -->
+        <div class="form-group" id="grp-edad">
+          <label class="form-label" for="input-edad">Edad <span class="optional">(Opcional)</span></label>
+          <input type="number" id="input-edad" class="form-input" placeholder="Ej.: 35" min="1" max="120" inputmode="numeric" onfocus="appFormHelper.autoFocusScroll(this)">
+        </div>
+
+        <!-- TARJETA DESPLEGABLE DE UBICACIÓN -->
+        <div class="location-trigger-card" onclick="appLocationModal.open()">
+          <div>
+            <div class="location-trigger-title">📍 ¿Dónde vive? <span class="optional" style="color:var(--text-muted); font-weight:normal;">(Opcional)</span></div>
+            <div class="location-trigger-sub" id="location-summary-text">Tocar para seleccionar partido/localidad</div>
+          </div>
+          <span style="font-size: 1.1rem; color: var(--primary);">✏️</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top: 0.25rem;">
+          GUARDAR REGISTRO
+        </button>
+      </form>
+    </div>
+
+    <!-- MODAL POPUP: SELECCIONAR UBICACIÓN -->
+    <div id="modal-location" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">📍 Seleccionar Ubicación</div>
+          <button type="button" class="btn-close-modal" onclick="appLocationModal.close()">✕</button>
+        </div>
+
+        <!-- 1. Partido -->
+        <div class="form-group" id="grp-partido" style="margin-bottom: 0.85rem;">
+          <label class="form-label" for="input-partido">Partido</label>
+          <input type="text" id="input-partido" class="form-input" placeholder="Ej. Malvinas Argentinas, Tigre, Escobar" autocomplete="off">
+          <div id="drop-partido" class="autocomplete-dropdown"></div>
+        </div>
+
+        <!-- 2. Localidad -->
+        <div class="form-group" id="grp-localidad" style="margin-bottom: 0.85rem;">
+          <label class="form-label" for="input-localidad">Localidad</label>
+          <input type="text" id="input-localidad" class="form-input" placeholder="Ej. Villa de Mayo, General Pacheco, Maschwitz" autocomplete="off">
+          <div id="drop-localidad" class="autocomplete-dropdown"></div>
+        </div>
+
+        <!-- 3. Dirección Exacta (Opcional) -->
+        <div class="form-group" id="grp-direccion" style="margin-bottom: 1.25rem;">
+          <label class="form-label" for="input-direccion">Calle y número <span class="optional">(Opcional)</span></label>
+          <input type="text" id="input-direccion" class="form-input" placeholder="Ej. Renacimiento 2764" autocomplete="off">
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="appLocationModal.confirm()">
+          Listo / Confirmar
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL POPUP: NOTIFICACIONES NATIVAS (Avisos/Aciertos/Errores) -->
+    <div id="modal-msg" class="modal-overlay">
+      <div class="modal-content" style="text-align: center;">
+        <div id="msg-icon" style="font-size: 2.8rem; margin-bottom: 0.4rem;">ℹ️</div>
+        <div id="msg-title" class="modal-title" style="margin-bottom: 0.4rem;">Aviso</div>
+        <p id="msg-body" style="font-size: 0.925rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.4;"></p>
+        <button type="button" class="btn btn-primary" onclick="appToast.closeMsg()">Aceptar</button>
+      </div>
+    </div>
+
+    <!-- MODAL POPUP: CONFIRMACIÓN DE ELIMINACIÓN -->
+    <div id="modal-confirm-delete" class="modal-overlay">
+      <div class="modal-content" style="text-align: center;">
+        <div style="font-size: 2.8rem; margin-bottom: 0.4rem;">🗑️</div>
+        <div class="modal-title" style="margin-bottom: 0.4rem;">¿Eliminar Registro?</div>
+        <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.25rem;">Esta acción borrará el registro únicamente de este dispositivo local.</p>
+        <div style="display: flex; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" onclick="appRecordsView.closeDeleteModal()">Cancelar</button>
+          <button type="button" class="btn btn-primary" style="background: var(--danger);" onclick="appRecordsView.confirmDelete()">Eliminar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL POPUP: ESTADÍSTICAS -->
+    <div id="modal-stats" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">📊 Estadísticas Generales</div>
+          <button type="button" class="btn-close-modal" onclick="appStatsModal.close()">✕</button>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="stat-total-val">0</div>
+            <div class="stat-label">Total Registros</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="stat-avg-age">0</div>
+            <div class="stat-label">Promedio Edad</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="stat-synced-val" style="color:#10b981;">0</div>
+            <div class="stat-label">Sincronizados</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="stat-pending-val" style="color:#f97316;">0</div>
+            <div class="stat-label">Pendientes</div>
+          </div>
+        </div>
+
+        <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--text-dark);">Top Partidos / Municipios</div>
+        <div class="stat-list" id="stat-partidos-list">
+          <div class="stat-list-item"><span>Sin datos</span><span>0</span></div>
+        </div>
+
+        <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--text-dark);">Top Localidades</div>
+        <div class="stat-list" id="stat-localidades-list">
+          <div class="stat-list-item"><span>Sin datos</span><span>0</span></div>
+        </div>
+
+        <button type="button" class="btn btn-secondary" onclick="appStatsModal.close()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL POPUP: PIN DE ADMINISTRADOR -->
+    <div id="modal-admin-pin" class="modal-overlay">
+      <div class="modal-content" style="text-align: center;">
+        <div class="modal-header">
+          <div class="modal-title">🔒 Acceso Administrador</div>
+          <button type="button" class="btn-close-modal" onclick="appAdmin.closePinModal()">✕</button>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Ingresá la clave PIN validada en el servidor.</p>
+        
+        <div class="pin-dots">
+          <div class="pin-dot" id="dot-0"></div>
+          <div class="pin-dot" id="dot-1"></div>
+          <div class="pin-dot" id="dot-2"></div>
+          <div class="pin-dot" id="dot-3"></div>
+        </div>
+
+        <div class="keypad">
+          <button type="button" class="keypad-btn" onclick="appAdmin.pressPin('1')">1</button>
+          <button type="button" class="keypad-btn" onclick="appAdmin.pressPin('2')">2</button>
+          <button type="button" class="keypad-btn" onclick="appAdmin.pressPin('3')">3</button>
+          <button type="button" class="keypad-btn" onclick="appAdmin.pressPin('4')">4</button>
+          <button type="button" class="keypad-btn" onclick="appAdmin.pressPin('5')">5</button>
+          <button type="button" class="keypad-btn" onclick="appAdmin.pressPin('6')">6</button>
+          <button type="button" class="keypad-btn" onclick="appAdmin.pressPin('7')">7</button>
+          <button type="button" class="keypad-btn" onclick="appAdmin.pressPin('8')">8</button>
+          <button type="button" class="keypad-btn" onclick="appAdmin.pressPin('9')">9</button>
+          <button type="button" class="keypad-btn" style="font-size: 0.9rem;" onclick="appAdmin.clearPin()">C</button>
+          <button type="button" class="keypad-btn" onclick="appAdmin.pressPin('0')">0</button>
+          <button type="button" class="keypad-btn" style="font-size: 0.9rem;" onclick="appAdmin.deletePin()">⌫</button>
+        </div>
+        <div id="pin-error-text" style="color: var(--danger); font-size: 0.8rem; font-weight: 700; margin-top: 0.75rem; display: none;">PIN Incorrecto</div>
+      </div>
+    </div>
+
+    <!-- 3. PANTALLA CONFIRMACIÓN -->
+    <div id="screen-confirm" class="view-screen confirm-screen">
+      <div class="success-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text-dark);">✓ Registro realizado</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.4rem; margin-bottom: 1.8rem;">Los datos fueron guardados en el teléfono.</p>
+
+      <div style="width: 100%; display: flex; flex-direction: column; gap: 0.75rem;">
+        <button class="btn btn-primary" onclick="appRegistration.resetAndRegisterNew()">
+          Registrar otra persona
+        </button>
+        <button class="btn btn-secondary" onclick="appNavigation.showScreen('view-home')">
+          Volver al inicio
+        </button>
+      </div>
+    </div>
+
+    <!-- 4. VISTA DE REGISTROS (SOLO ADMIN) -->
+    <div id="screen-records" class="view-screen">
+      <div style="margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-outline" onclick="appNavigation.showScreen('view-home')" style="width: auto; padding: 0.35rem 0.75rem; font-size: 0.825rem;">← Inicio</button>
+        <button class="btn btn-outline" onclick="appAdmin.logout()" style="width: auto; padding: 0.35rem 0.75rem; font-size: 0.825rem; color: var(--danger); border-color: #fee2e2;">Salir Admin</button>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+        <h2 style="font-size: 1.35rem; font-weight: 800;">Registros</h2>
+        
+        <div style="display: flex; gap: 0.4rem;">
+          <button class="btn btn-outline" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.8rem;" onclick="appStatsModal.open()">📊 Stats</button>
+          <button class="btn btn-primary" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.8rem; min-height: 38px;" onclick="appExport.exportCurrent()">📥 Excel</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+        <input type="text" id="filter-nombre" class="form-input" placeholder="Buscar por Nombre" oninput="appRecordsView.applyFilters()">
+        <input type="text" id="filter-apellido" class="form-input" placeholder="Buscar por Apellido" oninput="appRecordsView.applyFilters()">
+
+        <select id="filter-provincia" class="form-input" onchange="appRecordsView.onProvinciaChange()">
+          <option value="">Provincia: Todas</option>
+        </select>
+
+        <select id="filter-partido" class="form-input" onchange="appRecordsView.onPartidoChange()">
+          <option value="">Partido: Todos</option>
+        </select>
+
+        <select id="filter-localidad" class="form-input" onchange="appRecordsView.applyFilters()">
+          <option value="">Localidad: Todas</option>
+        </select>
+      </div>
+
+      <div id="records-container" style="flex: 1; overflow-y: auto;">
+        <!-- Tarjetas dinámicas -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+     LÓGICA JAVASCRIPT MODULAR
+     ========================================== -->
+  <script>
+    /* ==========================================
+       A. CONFIGURACIÓN GENERAL Y API
+       ========================================== */
+    const API_CONFIG = {
+      webAppUrl: 'https://script.google.com/macros/s/AKfycbxgPIaXsFDYqAWoHiGJd1O0wa1TbKgwZ2lRuuVvP_-HUT5Q8wNTzfUOGWFEFEV6LKurzQ/exec',
+      autoSync: true
+    };
+
+    const CONFIG = {
+      DB_NAME: 'MJCConectDB',
+      DB_VERSION: 1,
+      STORE_NAME: 'registros',
+      EVENT_ID: 'CAMPAÑA_2026'
+    };
+
+    const GEO_DATABASE = [
+      { localidad: "Ingeniero Maschwitz", partido: "Escobar", provincia: "Buenos Aires", aliases: ["maschwitz", "matchwich", "maswitz"] },
+      { localidad: "Garín", partido: "Escobar", provincia: "Buenos Aires", aliases: ["garin", "galin"] },
+      { localidad: "Belén de Escobar", partido: "Escobar", provincia: "Buenos Aires", aliases: ["escobar"] },
+      { localidad: "Maquinista F. Savio", partido: "Escobar", provincia: "Buenos Aires", aliases: ["savio"] },
+      { localidad: "Matheu", partido: "Escobar", provincia: "Buenos Aires", aliases: ["matheu"] },
+
+      { localidad: "General Pacheco", partido: "Tigre", provincia: "Buenos Aires", aliases: ["pacheco"] },
+      { localidad: "Benavídez", partido: "Tigre", provincia: "Buenos Aires", aliases: ["benavidez"] },
+      { localidad: "Don Torcuato", partido: "Tigre", provincia: "Buenos Aires", aliases: ["torcuato"] },
+      { localidad: "Tigre", partido: "Tigre", provincia: "Buenos Aires", aliases: ["tigre centro"] },
+      { localidad: "El Talar", partido: "Tigre", provincia: "Buenos Aires", aliases: ["talar"] },
+      { localidad: "Rincón de Milberg", partido: "Tigre", provincia: "Buenos Aires", aliases: ["rincon"] },
+      { localidad: "Nordelta", partido: "Tigre", provincia: "Buenos Aires", aliases: ["nordelta"] },
+
+      { localidad: "Villa de Mayo", partido: "Malvinas Argentinas", provincia: "Buenos Aires", aliases: ["villa de mayo"] },
+      { localidad: "Los Polvorines", partido: "Malvinas Argentinas", provincia: "Buenos Aires", aliases: ["polvorines"] },
+      { localidad: "Grand Bourg", partido: "Malvinas Argentinas", provincia: "Buenos Aires", aliases: ["grand bourg", "gran burg"] },
+      { localidad: "Ingeniero Pablo Nogués", partido: "Malvinas Argentinas", provincia: "Buenos Aires", aliases: ["nogues"] },
+      { localidad: "Tortuguitas", partido: "Malvinas Argentinas", provincia: "Buenos Aires", aliases: ["tortuguitas"] },
+      { localidad: "Ingeniero Adolfo Sourdeaux", partido: "Malvinas Argentinas", provincia: "Buenos Aires", aliases: ["sourdeaux"] },
+
+      { localidad: "San Miguel", partido: "San Miguel", provincia: "Buenos Aires", aliases: ["san miguel"] },
+      { localidad: "Bella Vista", partido: "San Miguel", provincia: "Buenos Aires", aliases: ["bella vista"] },
+      { localidad: "Muñiz", partido: "San Miguel", provincia: "Buenos Aires", aliases: ["muniz", "muñiz"] },
+
+      { localidad: "José C. Paz", partido: "José C. Paz", provincia: "Buenos Aires", aliases: ["jose c paz", "jc paz"] },
+      { localidad: "Pilar", partido: "Pilar", provincia: "Buenos Aires", aliases: ["pilar"] },
+      { localidad: "Del Viso", partido: "Pilar", provincia: "Buenos Aires", aliases: ["del viso"] },
+      { localidad: "San Isidro", partido: "San Isidro", provincia: "Buenos Aires", aliases: ["san isidro"] },
+      { localidad: "Vicente López", partido: "Vicente López", provincia: "Buenos Aires", aliases: ["vicente lopez"] },
+      { localidad: "San Martín", partido: "General San Martín", provincia: "Buenos Aires", aliases: ["san martin"] },
+      { localidad: "CABA Centro", partido: "CABA", provincia: "Ciudad Autónoma de Buenos Aires", aliases: ["caba", "capital"] }
+    ];
+
+    /* ==========================================
+       B. SISTEMA DE NOTIFICACIONES EMERGENTES (POP NATIVO)
+       ========================================== */
+    const appToast = {
+      modalEl: document.getElementById('modal-msg'),
+
+      show(message, type = 'info', title = null) {
+        const iconEl = document.getElementById('msg-icon');
+        const titleEl = document.getElementById('msg-title');
+        const bodyEl = document.getElementById('msg-body');
+
+        if (type === 'success') {
+          iconEl.innerText = '✓';
+          iconEl.style.color = 'var(--success)';
+          titleEl.innerText = title || 'Operación Exitosa';
+        } else if (type === 'warning' || type === 'error') {
+          iconEl.innerText = '⚠️';
+          iconEl.style.color = 'var(--danger)';
+          titleEl.innerText = title || 'Atención';
+        } else {
+          iconEl.innerText = 'ℹ️';
+          iconEl.style.color = 'var(--primary)';
+          titleEl.innerText = title || 'Aviso';
+        }
+
+        bodyEl.innerText = message;
+        this.modalEl.classList.add('active');
+      },
+
+      closeMsg() {
+        this.modalEl.classList.remove('active');
+      }
+    };
+
+    /* ==========================================
+       C. HELPER DE NORMALIZACIÓN Y ID
+       ========================================== */
+    const IdGenerator = {
+      generate() {
+        const chars = 'ABCDEF0123456789';
+        let result = '';
+        for (let i = 0; i < 8; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return `PER-${result}`;
+      }
+    };
+
+    function normalizeText(str) {
+      if (!str) return '';
+      return str
+        .toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "");
+    }
+
+    /* ==========================================
+       D. AUTENTICACIÓN ADMIN SERVIDOR
+       ========================================== */
+    const appAdmin = {
+      isAdmin: false,
+      currentPin: '',
+
+      handleRecordsClick() {
+        if (this.isAdmin) {
+          appNavigation.showScreen('view-records');
+        } else {
+          this.openPinModal();
+        }
+      },
+
+      openPinModal() {
+        this.currentPin = '';
+        this.updatePinDots();
+        document.getElementById('pin-error-text').style.display = 'none';
+        document.getElementById('modal-admin-pin').classList.add('active');
+      },
+
+      closePinModal() {
+        document.getElementById('modal-admin-pin').classList.remove('active');
+      },
+
+      pressPin(digit) {
+        if (this.currentPin.length < 4) {
+          this.currentPin += digit;
+          this.updatePinDots();
+
+          if (this.currentPin.length === 4) {
+            setTimeout(() => this.verifyPin(), 100);
+          }
+        }
+      },
+
+      deletePin() {
+        if (this.currentPin.length > 0) {
+          this.currentPin = this.currentPin.slice(0, -1);
+          this.updatePinDots();
+        }
+      },
+
+      clearPin() {
+        this.currentPin = '';
+        this.updatePinDots();
+      },
+
+      updatePinDots() {
+        for (let i = 0; i < 4; i++) {
+          const dot = document.getElementById(`dot-${i}`);
+          dot.classList.toggle('filled', i < this.currentPin.length);
+        }
+      },
+
+      async verifyPin() {
+        if (!navigator.onLine) {
+          const errEl = document.getElementById('pin-error-text');
+          errEl.innerText = 'Se requiere conexión a Internet para validar el PIN';
+          errEl.style.display = 'block';
+          this.clearPin();
+          return;
+        }
+
+        const errEl = document.getElementById('pin-error-text');
+        errEl.style.display = 'none';
+
+        try {
+          const response = await fetch(API_CONFIG.webAppUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'verifyPin',
+              pin: this.currentPin
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.status === 'success' && data.valid === true) {
+            this.isAdmin = true;
+            document.getElementById('admin-indicator').style.display = 'inline-flex';
+            this.closePinModal();
+            appNavigation.showScreen('view-records');
+          } else {
+            errEl.innerText = 'PIN Incorrecto';
+            errEl.style.display = 'block';
+            this.clearPin();
+          }
+        } catch (err) {
+          console.error('Error al validar PIN:', err);
+          errEl.innerText = 'Error al conectar con el servidor';
+          errEl.style.display = 'block';
+          this.clearPin();
+        }
+      },
+
+      logout() {
+        this.isAdmin = false;
+        document.getElementById('admin-indicator').style.display = 'none';
+        appNavigation.showScreen('view-home');
+      }
+    };
+
+    /* ==========================================
+       E. MANEJO DE UBICACIÓN EMERGENTE
+       ========================================== */
+    const appLocationModal = {
+      modalEl: document.getElementById('modal-location'),
+      inputPartido: document.getElementById('input-partido'),
+      inputLocalidad: document.getElementById('input-localidad'),
+      inputDireccion: document.getElementById('input-direccion'),
+      dropPartido: document.getElementById('drop-partido'),
+      dropLocalidad: document.getElementById('drop-localidad'),
+      summaryText: document.getElementById('location-summary-text'),
+
+      init() {
+        this.inputPartido.addEventListener('input', (e) => this.handlePartidoInput(e.target.value));
+        this.inputLocalidad.addEventListener('input', (e) => this.handleLocalidadInput(e.target.value));
+
+        document.addEventListener('click', (e) => {
+          if (!this.inputPartido.contains(e.target) && !this.dropPartido.contains(e.target)) {
+            this.dropPartido.style.display = 'none';
+          }
+          if (!this.inputLocalidad.contains(e.target) && !this.dropLocalidad.contains(e.target)) {
+            this.dropLocalidad.style.display = 'none';
+          }
+        });
+      },
+
+      open() {
+        this.modalEl.classList.add('active');
+      },
+
+      close() {
+        this.modalEl.classList.remove('active');
+        this.updateSummary();
+      },
+
+      confirm() {
+        this.close();
+      },
+
+      updateSummary() {
+        const loc = this.inputLocalidad.value.trim();
+        const par = this.inputPartido.value.trim();
+        const cal = this.inputDireccion.value.trim();
+
+        if (loc || par || cal) {
+          let text = cal ? `${cal}, ` : '';
+          text += loc ? `${loc}` : '';
+          text += par ? ` (${par})` : '';
+          this.summaryText.innerText = text;
+          this.summaryText.style.color = 'var(--primary)';
+        } else {
+          this.summaryText.innerText = 'Tocar para seleccionar partido/localidad';
+          this.summaryText.style.color = 'var(--text-dark)';
+        }
+      },
+
+      handlePartidoInput(query) {
+        const normQ = normalizeText(query);
+        if (!normQ) {
+          this.dropPartido.style.display = 'none';
+          return;
+        }
+
+        const partidosUnicos = [...new Set(GEO_DATABASE.map(item => item.partido))];
+        const matches = partidosUnicos.filter(p => normalizeText(p).includes(normQ));
+
+        if (matches.length === 0) {
+          this.dropPartido.style.display = 'none';
+          return;
+        }
+
+        this.dropPartido.innerHTML = matches.map(partido => `
+          <div class="autocomplete-item" onclick="appLocationModal.selectPartido('${partido}')">
+            <span class="item-main">${partido}</span>
+          </div>
+        `).join('');
+
+        this.dropPartido.style.display = 'block';
+      },
+
+      selectPartido(partido) {
+        this.inputPartido.value = partido;
+        this.dropPartido.style.display = 'none';
+      },
+
+      handleLocalidadInput(query) {
+        const normQ = normalizeText(query);
+        if (!normQ) {
+          this.dropLocalidad.style.display = 'none';
+          return;
+        }
+
+        const normCurrentPartido = normalizeText(this.inputPartido.value);
+
+        let matches = GEO_DATABASE.filter(item => {
+          const matchLoc = normalizeText(item.localidad).includes(normQ);
+          const matchPart = normalizeText(item.partido).includes(normQ);
+          const matchAlias = item.aliases && item.aliases.some(alias => normalizeText(alias).includes(normQ));
+
+          return matchLoc || matchPart || matchAlias;
+        });
+
+        if (normCurrentPartido) {
+          matches.sort((a, b) => {
+            const aMatch = normalizeText(a.partido) === normCurrentPartido ? -1 : 1;
+            const bMatch = normalizeText(b.partido) === normCurrentPartido ? -1 : 1;
+            return aMatch - bMatch;
+          });
+        }
+
+        if (matches.length === 0) {
+          this.dropLocalidad.style.display = 'none';
+          return;
+        }
+
+        this.dropLocalidad.innerHTML = matches.map(item => `
+          <div class="autocomplete-item" onclick="appLocationModal.selectLocalidad('${item.localidad}', '${item.partido}')">
+            <div>
+              <div class="item-main">${item.localidad}</div>
+              <div class="item-sub">Partido: ${item.partido}</div>
+            </div>
+          </div>
+        `).join('');
+
+        this.dropLocalidad.style.display = 'block';
+      },
+
+      selectLocalidad(localidad, partido) {
+        this.inputLocalidad.value = localidad;
+        this.inputPartido.value = partido;
+        this.dropLocalidad.style.display = 'none';
+      },
+
+      reset() {
+        this.inputPartido.value = '';
+        this.inputLocalidad.value = '';
+        this.inputDireccion.value = '';
+        this.summaryText.innerText = 'Tocar para seleccionar partido/localidad';
+        this.summaryText.style.color = 'var(--text-dark)';
+      }
+    };
+
+    /* ==========================================
+       F. PERSISTENCIA INDEXEDDB Y SINCRONIZACIÓN
+       ========================================== */
+    const LocalDB = {
+      db: null,
+
+      init() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
+
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(CONFIG.STORE_NAME)) {
+              const store = db.createObjectStore(CONFIG.STORE_NAME, { keyPath: 'id' });
+              store.createIndex('sincronizado', 'sincronizado', { unique: false });
+            }
+          };
+
+          request.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve(this.db);
+          };
+
+          request.onerror = (e) => reject(e.target.error);
+        });
+      },
+
+      async saveRecord(record) {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([CONFIG.STORE_NAME], 'readwrite');
+          const store = tx.objectStore(CONFIG.STORE_NAME);
+          const req = store.add(record);
+          req.onsuccess = () => resolve(true);
+          req.onerror = (e) => reject(e.target.error);
+        });
+      },
+
+      async getAllRecords() {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([CONFIG.STORE_NAME], 'readonly');
+          const store = tx.objectStore(CONFIG.STORE_NAME);
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = (e) => reject(e.target.error);
+        });
+      },
+
+      async getUnsyncedRecords() {
+        const records = await this.getAllRecords();
+        return records.filter(r => !r.sincronizado);
+      },
+
+      async markAsSynced(ids) {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([CONFIG.STORE_NAME], 'readwrite');
+          const store = tx.objectStore(CONFIG.STORE_NAME);
+          
+          ids.forEach(id => {
+            const req = store.get(id);
+            req.onsuccess = (e) => {
+              const item = e.target.result;
+              if (item) {
+                item.sincronizado = true;
+                store.put(item);
+              }
+            };
+          });
+
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = (e) => reject(e.target.error);
+        });
+      },
+
+      async deleteRecord(id) {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction([CONFIG.STORE_NAME], 'readwrite');
+          const store = tx.objectStore(CONFIG.STORE_NAME);
+          const req = store.delete(id);
+          req.onsuccess = () => resolve(true);
+          req.onerror = (e) => reject(e.target.error);
+        });
+      }
+    };
+
+    const appSync = {
+      isSyncing: false,
+
+      async updatePendingUI() {
+        const pending = await LocalDB.getUnsyncedRecords();
+        document.getElementById('sync-pending-text').innerText = `Envíos pendientes: ${pending.length}`;
+        
+        const badge = document.getElementById('sync-network-badge');
+        if (navigator.onLine) {
+          badge.className = "status-badge online";
+          badge.innerText = "🟢 Conectado";
+        } else {
+          badge.className = "status-badge offline";
+          badge.innerText = "🔴 Modo Offline";
+        }
+      },
+
+      async syncPendingRecords() {
+        if (this.isSyncing) return;
+        if (!navigator.onLine) {
+          appToast.show('Sin conexión a Internet. Los datos permanecen guardados en tu teléfono.', 'warning');
+          return;
+        }
+
+        const pending = await LocalDB.getUnsyncedRecords();
+        if (pending.length === 0) {
+          appToast.show('No hay registros pendientes de envío.', 'info');
+          return;
+        }
+
+        const btn = document.getElementById('btn-sync-now');
+        btn.innerText = '⏳ Sincronizando...';
+        this.isSyncing = true;
+
+        try {
+          const response = await fetch(API_CONFIG.webAppUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'syncRecords',
+              records: pending
+            })
+          });
+
+          if (response.ok) {
+            const syncedIds = pending.map(p => p.id);
+            await LocalDB.markAsSynced(syncedIds);
+            appToast.show(`${syncedIds.length} registro(s) sincronizado(s) con éxito en la planilla.`, 'success');
+          } else {
+            throw new Error('Respuesta del servidor no válida.');
+          }
+        } catch (err) {
+          console.warn('Error al conectar con la API de Google:', err);
+          appToast.show('Hubo un inconveniente al enviar los datos. Permanecen guardados de forma segura.', 'warning');
+        } finally {
+          this.isSyncing = false;
+          btn.innerText = '🔄 Sincronizar datos';
+          await this.updatePendingUI();
+        }
+      }
+    };
+
+    /* ==========================================
+       G. ESTADÍSTICAS Y EXPORTACIÓN EXCEL (.XLSX NATIVO)
+       ========================================== */
+    const appStatsModal = {
+      modalEl: document.getElementById('modal-stats'),
+
+      async open() {
+        const records = await LocalDB.getAllRecords();
+        
+        document.getElementById('stat-total-val').innerText = records.length;
+        const synced = records.filter(r => r.sincronizado).length;
+        document.getElementById('stat-synced-val').innerText = synced;
+        document.getElementById('stat-pending-val').innerText = records.length - synced;
+
+        const ages = records.map(r => r.edad).filter(Boolean);
+        const avgAge = ages.length > 0 ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length) : 0;
+        document.getElementById('stat-avg-age').innerText = avgAge > 0 ? `${avgAge} años` : '-';
+
+        const partidosCount = {};
+        const localidadesCount = {};
+
+        records.forEach(r => {
+          const u = r.ubicacion || {};
+          if (u.partido) partidosCount[u.partido] = (partidosCount[u.partido] || 0) + 1;
+          if (u.localidad) localidadesCount[u.localidad] = (localidadesCount[u.localidad] || 0) + 1;
+        });
+
+        this.renderCountList('stat-partidos-list', partidosCount);
+        this.renderCountList('stat-localidades-list', localidadesCount);
+
+        this.modalEl.classList.add('active');
+      },
+
+      renderCountList(elementId, countMap) {
+        const sorted = Object.entries(countMap).sort((a, b) => b[1] - a[1]).slice(0, 4);
+        const container = document.getElementById(elementId);
+
+        if (sorted.length === 0) {
+          container.innerHTML = `<div class="stat-list-item"><span>Sin especificar</span><span>0</span></div>`;
+          return;
+        }
+
+        container.innerHTML = sorted.map(([key, count]) => `
+          <div class="stat-list-item">
+            <span>${key}</span>
+            <span>${count}</span>
+          </div>
+        `).join('');
+      },
+
+      close() {
+        this.modalEl.classList.remove('active');
+      }
+    };
+
+    const appExport = {
+      exportCurrent() {
+        if (typeof XLSX === 'undefined') {
+          appToast.show('Se requiere conexión a Internet para descargar el motor de Excel (.xlsx).', 'error');
+          return;
+        }
+
+        const recordsToExport = appRecordsView.filteredRecords;
+
+        if (!recordsToExport || recordsToExport.length === 0) {
+          appToast.show('No hay registros en pantalla para exportar.', 'warning');
+          return;
+        }
+
+        const exportData = recordsToExport.map(r => {
+          const u = r.ubicacion || {};
+          return {
+            'Nombre': r.nombre || '',
+            'Apellido': r.apellido || '',
+            'Contacto / WhatsApp': String(r.telefono || ''),
+            'Edad': r.edad !== null && r.edad !== undefined ? r.edad : '',
+            'Partido': u.partido || '',
+            'Localidad': u.localidad || '',
+            'Calle y número': u.direccionOriginal || ''
+          };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        ws['!cols'] = [
+          { wch: 18 },
+          { wch: 18 },
+          { wch: 20 },
+          { wch: 8 },
+          { wch: 22 },
+          { wch: 22 },
+          { wch: 25 }
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Registros");
+
+        const isFiltered = appRecordsView.allRecords.length !== recordsToExport.length;
+        const dateTag = new Date().toISOString().slice(0, 10);
+        const fileName = isFiltered ? 
+          `MJC_Conect_Filtrados_${dateTag}.xlsx` : 
+          `MJC_Conect_Todos_${dateTag}.xlsx`;
+
+        XLSX.writeFile(wb, fileName);
+
+        appToast.show(`${recordsToExport.length} registro(s) exportado(s) a Excel (.xlsx).`, 'success');
+      }
+    };
+
+    /* ==========================================
+       H. REGISTRO Y FORMULARIO
+       ========================================== */
+    const appFormHelper = {
+      autoFocusScroll(element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
+      }
+    };
+
+    const appRegistration = {
+      init() {
+        appLocationModal.init();
+      },
+
+      clearErrors() {
+        ['grp-nombre', 'grp-telefono'].forEach(id => {
+          document.getElementById(id).classList.remove('has-error');
+        });
+      },
+
+      async handleSubmit(e) {
+        e.preventDefault();
+        this.clearErrors();
+
+        const nombre = document.getElementById('input-nombre').value.trim();
+        const telefono = document.getElementById('input-telefono').value.trim();
+
+        const apellido = document.getElementById('input-apellido').value.trim();
+        const edadVal = document.getElementById('input-edad').value.trim();
+        const edad = edadVal ? parseInt(edadVal, 10) : null;
+        
+        const partido = appLocationModal.inputPartido.value.trim();
+        const localidad = appLocationModal.inputLocalidad.value.trim();
+        const calleDireccion = appLocationModal.inputDireccion.value.trim();
+
+        let isValid = true;
+
+        if (!nombre) {
+          document.getElementById('grp-nombre').classList.add('has-error');
+          isValid = false;
+        }
+
+        if (!telefono) {
+          document.getElementById('grp-telefono').classList.add('has-error');
+          isValid = false;
+        }
+
+        if (!isValid) return;
+
+        const normLoc = normalizeText(localidad);
+        const foundGeo = GEO_DATABASE.find(g => normalizeText(g.localidad) === normLoc);
+        const provincia = foundGeo ? foundGeo.provincia : (partido ? 'Buenos Aires' : '');
+
+        let direccionCompleta = 'Sin especificar';
+        if (calleDireccion || localidad || partido) {
+          direccionCompleta = [calleDireccion, localidad, partido].filter(Boolean).join(', ');
+        }
+
+        const newRecord = {
+          id: IdGenerator.generate(),
+          nombre: nombre,
+          apellido: apellido || '',
+          edad: edad,
+          telefono: telefono,
+          ubicacion: {
+            direccionOriginal: calleDireccion || localidad || '',
+            direccionCompleta: direccionCompleta,
+            localidad: localidad || '',
+            partido: partido || '',
+            provincia: provincia,
+            pais: "Argentina",
+            tieneCalleExacta: Boolean(calleDireccion)
+          },
+          fechaRegistro: new Date().toISOString(),
+          eventoId: CONFIG.EVENT_ID,
+          sincronizado: false
+        };
+
+        try {
+          await LocalDB.saveRecord(newRecord);
+          
+          if (navigator.onLine && API_CONFIG.autoSync) {
+            appSync.syncPendingRecords();
+          }
+
+          // LIMPIEZA INMEDIATA TRAS GUARDAR
+          this.resetAndRegisterNew();
+          
+          appNavigation.showScreen('view-confirm');
+        } catch (err) {
+          appToast.show('Error al guardar el registro en la memoria local.', 'error');
+          console.error(err);
+        }
+      },
+
+      resetAndRegisterNew() {
+        document.getElementById('registration-form').reset();
+        appLocationModal.reset();
+        this.clearErrors();
+      }
+    };
+
+    /* ==========================================
+       I. INSPECCIÓN DE REGISTROS Y FILTROS
+       ========================================== */
+    const appRecordsView = {
+      allRecords: [],
+      filteredRecords: [],
+      pendingDeleteId: null,
+
+      async loadAndRender() {
+        this.allRecords = await LocalDB.getAllRecords();
+        this.populateFilterDropdowns();
+        this.applyFilters();
+      },
+
+      populateFilterDropdowns() {
+        const provSelect = document.getElementById('filter-provincia');
+        const provincias = [...new Set(this.allRecords.map(r => r.ubicacion?.provincia).filter(Boolean))];
+        
+        provSelect.innerHTML = '<option value="">Provincia: Todas</option>' + 
+          provincias.map(p => `<option value="${p}">${p}</option>`).join('');
+
+        this.onProvinciaChange();
+      },
+
+      onProvinciaChange() {
+        const selectedProv = document.getElementById('filter-provincia').value;
+        const partSelect = document.getElementById('filter-partido');
+
+        const filtered = selectedProv ? 
+          this.allRecords.filter(r => r.ubicacion?.provincia === selectedProv) : 
+          this.allRecords;
+
+        const partidos = [...new Set(filtered.map(r => r.ubicacion?.partido).filter(Boolean))];
+        
+        partSelect.innerHTML = '<option value="">Partido: Todos</option>' + 
+          partidos.map(p => `<option value="${p}">${p}</option>`).join('');
+
+        this.onPartidoChange();
+      },
+
+      onPartidoChange() {
+        const selectedProv = document.getElementById('filter-provincia').value;
+        const selectedPart = document.getElementById('filter-partido').value;
+        const locSelect = document.getElementById('filter-localidad');
+
+        let filtered = this.allRecords;
+        if (selectedProv) filtered = filtered.filter(r => r.ubicacion?.provincia === selectedProv);
+        if (selectedPart) filtered = filtered.filter(r => r.ubicacion?.partido === selectedPart);
+
+        const localidades = [...new Set(filtered.map(r => r.ubicacion?.localidad).filter(Boolean))];
+
+        locSelect.innerHTML = '<option value="">Localidad: Todas</option>' + 
+          localidades.map(l => `<option value="${l}">${l}</option>`).join('');
+
+        this.applyFilters();
+      },
+
+      applyFilters() {
+        const fNombre = normalizeText(document.getElementById('filter-nombre').value);
+        const fApellido = normalizeText(document.getElementById('filter-apellido').value);
+        const fProv = document.getElementById('filter-provincia').value;
+        const fPart = document.getElementById('filter-partido').value;
+        const fLoc = document.getElementById('filter-localidad').value;
+
+        this.filteredRecords = this.allRecords.filter(r => {
+          const mNombre = !fNombre || normalizeText(r.nombre).includes(fNombre);
+          const mApellido = !fApellido || normalizeText(r.apellido).includes(fApellido);
+          const mProv = !fProv || (r.ubicacion && r.ubicacion.provincia === fProv);
+          const mPart = !fPart || (r.ubicacion && r.ubicacion.partido === fPart);
+          const mLoc = !fLoc || (r.ubicacion && r.ubicacion.localidad === fLoc);
+
+          return mNombre && mApellido && mProv && mPart && mLoc;
+        });
+
+        this.renderList(this.filteredRecords);
+      },
+
+      renderList(records) {
+        const container = document.getElementById('records-container');
+
+        if (records.length === 0) {
+          container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:2rem;">No se encontraron registros.</div>`;
+          return;
+        }
+
+        container.innerHTML = records.map(r => {
+          const dateStr = new Date(r.fechaRegistro).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+          const u = r.ubicacion || {};
+          const statusIcon = r.sincronizado ? '☁️ Sincronizado' : '📱 Local';
+
+          return `
+            <div class="record-card">
+              <div class="record-header">
+                <span class="record-name">${r.nombre} ${r.apellido}</span>
+                <span class="record-id-tag">${r.id}</span>
+              </div>
+              <div class="record-details">${r.edad ? `Edad: ${r.edad} años • ` : ''}Tel: ${r.telefono}</div>
+              <span class="record-location-tag">📍 ${u.direccionCompleta || 'Sin especificar'}</span>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.4rem;">
+                <span style="font-size:0.75rem; font-weight:700; color:${r.sincronizado ? '#166534' : '#9a3412'};">${statusIcon} • ${dateStr}</span>
+                <button class="btn-delete" onclick="appRecordsView.openDeleteModal('${r.id}')">Eliminar</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      },
+
+      openDeleteModal(id) {
+        this.pendingDeleteId = id;
+        document.getElementById('modal-confirm-delete').classList.add('active');
+      },
+
+      closeDeleteModal() {
+        this.pendingDeleteId = null;
+        document.getElementById('modal-confirm-delete').classList.remove('active');
+      },
+
+      async confirmDelete() {
+        if (this.pendingDeleteId) {
+          await LocalDB.deleteRecord(this.pendingDeleteId);
+          this.closeDeleteModal();
+          await this.loadAndRender();
+          appSync.updatePendingUI();
+          appToast.show('Registro eliminado.', 'info');
+        }
+      }
+    };
+
+    /* ==========================================
+       J. NAVEGACIÓN GENERAL
+       ========================================== */
+    const appNavigation = {
+      screens: {
+        'view-home': document.getElementById('screen-home'),
+        'view-register': document.getElementById('screen-register'),
+        'view-confirm': document.getElementById('screen-confirm'),
+        'view-records': document.getElementById('screen-records')
+      },
+
+      showScreen(key) {
+        Object.keys(this.screens).forEach(k => {
+          this.screens[k].classList.toggle('active', k === key);
+        });
+
+        if (key === 'view-home') appSync.updatePendingUI();
+        if (key === 'view-records') appRecordsView.loadAndRender();
+        window.scrollTo(0, 0);
+      }
+    };
+
+    /* ==========================================
+       K. INICIALIZACIÓN Y SERVICE WORKER
+       ========================================== */
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Registrar Service Worker para PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Service Worker registrado con éxito:', reg.scope))
+          .catch((err) => console.error('Error al registrar Service Worker:', err));
+      }
+
+      // Temporizador para desvanecer suavemente la Splash Screen
+      setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.classList.add('fade-out');
+      }, 2200);
+
+      await LocalDB.init();
+      appRegistration.init();
+      appSync.updatePendingUI();
+
+      window.addEventListener('online', () => appSync.updatePendingUI());
+      window.addEventListener('offline', () => appSync.updatePendingUI());
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "MJC Conect",
+  "short_name": "MJC Conect",
+  "description": "MJC Conect - Conectando personas",
+  "start_url": "./mjc-conect.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/GealFox/App-MJC-Conect/refs/heads/main/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/GealFox/App-MJC-Conect/refs/heads/main/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
