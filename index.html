@@ -256,7 +256,7 @@
     }
 
     /* ==========================================
-       4. BOTONES Y TARJETAS estilo NATIVO
+       4. BOTONES Y TARJETAS
        ========================================== */
     .card {
       background: var(--surface);
@@ -445,7 +445,7 @@
     }
 
     /* ==========================================
-       6. SISTEMA DE MODALES Y POPUPS ("POPS")
+       6. SISTEMA DE MODALES Y POPUPS
        ========================================== */
     .modal-overlay {
       position: fixed;
@@ -1018,13 +1018,10 @@
         </div>
       </div>
 
+      <!-- SECCIÓN DE FILTROS -->
       <div class="filter-grid-desktop" style="margin-bottom: 1rem;">
         <input type="text" id="filter-nombre" class="form-input" placeholder="Buscar por Nombre" oninput="appRecordsView.applyFilters()">
         <input type="text" id="filter-apellido" class="form-input" placeholder="Buscar por Apellido" oninput="appRecordsView.applyFilters()">
-
-        <select id="filter-provincia" class="form-input" onchange="appRecordsView.onProvinciaChange()">
-          <option value="">Provincia: Todas</option>
-        </select>
 
         <select id="filter-partido" class="form-input" onchange="appRecordsView.onPartidoChange()">
           <option value="">Partido: Todos</option>
@@ -1060,6 +1057,7 @@
       EVENT_ID: 'CAMPAÑA_2026'
     };
 
+    // BASE DE DATOS DE ZONAS PARA AUTOCOMPLETADO AL REGISTRAR
     const GEO_DATABASE = [
       { localidad: "Ingeniero Maschwitz", partido: "Escobar", provincia: "Buenos Aires", aliases: ["maschwitz", "matchwich", "maswitz"] },
       { localidad: "Garín", partido: "Escobar", provincia: "Buenos Aires", aliases: ["garin", "galin"] },
@@ -1856,24 +1854,15 @@
       },
 
       populateFilterDropdowns() {
-        const provSelect = document.getElementById('filter-provincia');
-        const provincias = [...new Set(this.allRecords.map(r => r.ubicacion?.provincia).filter(Boolean))];
-        
-        provSelect.innerHTML = '<option value="">Provincia: Todas</option>' + 
-          provincias.map(p => `<option value="${p}">${p}</option>`).join('');
-
-        this.onProvinciaChange();
-      },
-
-      onProvinciaChange() {
-        const selectedProv = document.getElementById('filter-provincia').value;
         const partSelect = document.getElementById('filter-partido');
+        
+        // EXTRAEMOS SOLO LOS PARTIDOS DE LOS REGISTROS QUE REALMENTE EXISTEN
+        const partidosRec = this.allRecords
+          .map(r => r.ubicacion?.partido)
+          .map(p => p ? p.trim() : ''); // Limpiamos espacios extra
 
-        const filtered = selectedProv ? 
-          this.allRecords.filter(r => r.ubicacion?.provincia === selectedProv) : 
-          this.allRecords;
-
-        const partidos = [...new Set(filtered.map(r => r.ubicacion?.partido).filter(Boolean))];
+        // Armamos lista única ordenada
+        const partidos = [...new Set(partidosRec.filter(Boolean))].sort();
         
         partSelect.innerHTML = '<option value="">Partido: Todos</option>' + 
           partidos.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -1882,15 +1871,27 @@
       },
 
       onPartidoChange() {
-        const selectedProv = document.getElementById('filter-provincia').value;
         const selectedPart = document.getElementById('filter-partido').value;
         const locSelect = document.getElementById('filter-localidad');
 
-        let filtered = this.allRecords;
-        if (selectedProv) filtered = filtered.filter(r => r.ubicacion?.provincia === selectedProv);
-        if (selectedPart) filtered = filtered.filter(r => r.ubicacion?.partido === selectedPart);
+        let localidades = [];
+        
+        if (selectedPart) {
+          // Extraemos localidades SOLO de los registros que coinciden con el partido
+          const locsRec = this.allRecords
+            .filter(r => (r.ubicacion?.partido || '').trim() === selectedPart)
+            .map(r => r.ubicacion?.localidad)
+            .map(l => l ? l.trim() : '');
+          
+          localidades = [...new Set(locsRec.filter(Boolean))].sort();
+        } else {
+          // Si no hay partido seleccionado, extraemos TODAS las localidades de los registros
+          const locsRec = this.allRecords
+            .map(r => r.ubicacion?.localidad)
+            .map(l => l ? l.trim() : '');
 
-        const localidades = [...new Set(filtered.map(r => r.ubicacion?.localidad).filter(Boolean))];
+          localidades = [...new Set(locsRec.filter(Boolean))].sort();
+        }
 
         locSelect.innerHTML = '<option value="">Localidad: Todas</option>' + 
           localidades.map(l => `<option value="${l}">${l}</option>`).join('');
@@ -1901,18 +1902,16 @@
       applyFilters() {
         const fNombre = normalizeText(document.getElementById('filter-nombre').value);
         const fApellido = normalizeText(document.getElementById('filter-apellido').value);
-        const fProv = document.getElementById('filter-provincia').value;
         const fPart = document.getElementById('filter-partido').value;
         const fLoc = document.getElementById('filter-localidad').value;
 
         this.filteredRecords = this.allRecords.filter(r => {
           const mNombre = !fNombre || normalizeText(r.nombre).includes(fNombre);
           const mApellido = !fApellido || normalizeText(r.apellido).includes(fApellido);
-          const mProv = !fProv || (r.ubicacion && r.ubicacion.provincia === fProv);
-          const mPart = !fPart || (r.ubicacion && r.ubicacion.partido === fPart);
-          const mLoc = !fLoc || (r.ubicacion && r.ubicacion.localidad === fLoc);
+          const mPart = !fPart || ((r.ubicacion?.partido || '').trim() === fPart);
+          const mLoc = !fLoc || ((r.ubicacion?.localidad || '').trim() === fLoc);
 
-          return mNombre && mApellido && mProv && mPart && mLoc;
+          return mNombre && mApellido && mPart && mLoc;
         });
 
         // Ordenamos para que los nuevos registros salgan arriba
@@ -1941,7 +1940,6 @@
           const u = r.ubicacion || {};
           const statusIcon = r.sincronizado ? '☁️ Sincronizado' : '📱 Local';
 
-          // Limpieza visual de Nombre, Apellido, Edad, Teléfono y Dirección
           const nombreCompleto = `${r.nombre || ''} ${r.apellido || ''}`.trim() || 'Sin Nombre';
           const edadText = (r.edad !== null && r.edad !== undefined && r.edad !== '' && !isNaN(r.edad)) ? `Edad: ${r.edad} años` : '';
           const telText = r.telefono ? `Tel: ${r.telefono}` : '';
@@ -1976,7 +1974,6 @@
         document.getElementById('modal-confirm-delete').classList.remove('active');
       },
 
-      // FUNCIÓN CORREGIDA PARA QUE HABLE CON LA NUBE AL BORRAR
       async confirmDelete() {
         if (!this.pendingDeleteId) return;
         
