@@ -445,7 +445,7 @@
     }
 
     /* ==========================================
-       6. SISTEMA DE MODALES Y POPUPS
+       6. SISTEMA DE MODALES Y NOTIFICACIONES
        ========================================== */
     .modal-overlay {
       position: fixed;
@@ -507,6 +507,31 @@
       font-weight: 800;
       color: var(--text-muted);
       cursor: pointer;
+    }
+
+    /* BURBUJA DE NOTIFICACIÓN NO INTRUSIVA (SNACKBAR) */
+    #snack-bar {
+      position: fixed;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text-dark);
+      color: white;
+      padding: 0.85rem 1.5rem;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      box-shadow: var(--shadow-lg);
+      transition: top 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      white-space: nowrap;
+    }
+    
+    #snack-bar.show {
+      top: 25px;
     }
 
     .autocomplete-dropdown {
@@ -743,6 +768,11 @@
     <div class="splash-credits">Creado por Gonzalo Abregú</div>
   </div>
 
+  <!-- NOTIFICACIÓN TIPO BURBUJA (SNACKBAR) PARA NO MOLESTAR AL USUARIO -->
+  <div id="snack-bar">
+    <span id="snack-icon">☁️</span> <span id="snack-text">Guardado en la nube</span>
+  </div>
+
   <div class="app-container">
     <!-- CABECERA DE NAVEGACIÓN -->
     <header>
@@ -779,7 +809,8 @@
           <span class="pending-count-text" id="sync-pending-text">Envíos pendientes: 0</span>
           <span id="sync-network-badge" class="status-badge online">🟢 Conectado</span>
         </div>
-        <button id="btn-sync-now" class="btn btn-outline" style="min-height: 40px; font-size: 0.875rem;" onclick="appSync.syncPendingRecords()">
+        <!-- ACÁ LE PASAMOS "true" PARA INDICAR QUE EL USUARIO TOCÓ EL BOTÓN MANUALMENTE -->
+        <button id="btn-sync-now" class="btn btn-outline" style="min-height: 40px; font-size: 0.875rem;" onclick="appSync.syncPendingRecords(true)">
           🔄 Sincronizar datos
         </button>
       </div>
@@ -1057,7 +1088,7 @@
       EVENT_ID: 'CAMPAÑA_2026'
     };
 
-    // BASE DE DATOS DE ZONAS PARA AUTOCOMPLETADO AL REGISTRAR
+    // BASE DE DATOS DE ZONAS (Oficial para mantener los filtros limpios)
     const GEO_DATABASE = [
       { localidad: "Ingeniero Maschwitz", partido: "Escobar", provincia: "Buenos Aires", aliases: ["maschwitz", "matchwich", "maswitz"] },
       { localidad: "Garín", partido: "Escobar", provincia: "Buenos Aires", aliases: ["garin", "galin"] },
@@ -1094,11 +1125,10 @@
     ];
 
     /* ==========================================
-       B. INSTALACIÓN PWA (PROMPT INSTALAR)
+       B. INSTALACIÓN PWA
        ========================================== */
     const appPWA = {
       deferredPrompt: null,
-
       init() {
         window.addEventListener('beforeinstallprompt', (e) => {
           e.preventDefault();
@@ -1111,10 +1141,9 @@
           this.deferredPrompt = null;
           const banner = document.getElementById('install-banner');
           if (banner) banner.style.display = 'none';
-          appToast.show('¡Aplicación instalada con éxito!', 'success');
+          appToast.showSnack('¡Aplicación instalada con éxito!');
         });
       },
-
       async install() {
         if (!this.deferredPrompt) return;
         this.deferredPrompt.prompt();
@@ -1128,7 +1157,7 @@
     };
 
     /* ==========================================
-       C. SISTEMA DE NOTIFICACIONES EMERGENTES
+       C. SISTEMA DE NOTIFICACIONES (BLOQUEANTES Y BURBUJAS)
        ========================================== */
     const appToast = {
       modalEl: document.getElementById('modal-msg'),
@@ -1158,6 +1187,18 @@
 
       closeMsg() {
         this.modalEl.classList.remove('active');
+      },
+
+      // NUEVO: Burbuja no intrusiva para procesos de fondo
+      showSnack(message, icon = '☁️') {
+        const snack = document.getElementById('snack-bar');
+        document.getElementById('snack-text').innerText = message;
+        document.getElementById('snack-icon').innerText = icon;
+        snack.classList.add('show');
+        
+        setTimeout(() => {
+          snack.classList.remove('show');
+        }, 3000);
       }
     };
 
@@ -1271,10 +1312,7 @@
             method: 'POST',
             mode: 'cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-              action: 'verifyPin',
-              pin: this.currentPin
-            })
+            body: JSON.stringify({ action: 'verifyPin', pin: this.currentPin })
           });
 
           const data = await response.json();
@@ -1330,18 +1368,14 @@
         });
       },
 
-      open() {
-        this.modalEl.classList.add('active');
-      },
+      open() { this.modalEl.classList.add('active'); },
 
       close() {
         this.modalEl.classList.remove('active');
         this.updateSummary();
       },
 
-      confirm() {
-        this.close();
-      },
+      confirm() { this.close(); },
 
       updateSummary() {
         const loc = this.inputLocalidad.value.trim();
@@ -1402,7 +1436,6 @@
           const matchLoc = normalizeText(item.localidad).includes(normQ);
           const matchPart = normalizeText(item.partido).includes(normQ);
           const matchAlias = item.aliases && item.aliases.some(alias => normalizeText(alias).includes(normQ));
-
           return matchLoc || matchPart || matchAlias;
         });
 
@@ -1451,11 +1484,9 @@
        ========================================== */
     const LocalDB = {
       db: null,
-
       init() {
         return new Promise((resolve, reject) => {
           const request = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
-
           request.onupgradeneeded = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains(CONFIG.STORE_NAME)) {
@@ -1463,16 +1494,10 @@
               store.createIndex('sincronizado', 'sincronizado', { unique: false });
             }
           };
-
-          request.onsuccess = (e) => {
-            this.db = e.target.result;
-            resolve(this.db);
-          };
-
+          request.onsuccess = (e) => { this.db = e.target.result; resolve(this.db); };
           request.onerror = (e) => reject(e.target.error);
         });
       },
-
       async saveRecord(record) {
         return new Promise((resolve, reject) => {
           const tx = this.db.transaction([CONFIG.STORE_NAME], 'readwrite');
@@ -1482,22 +1507,15 @@
           req.onerror = (e) => reject(e.target.error);
         });
       },
-
       async saveBatchFromCloud(cloudRecords) {
         return new Promise((resolve, reject) => {
           const tx = this.db.transaction([CONFIG.STORE_NAME], 'readwrite');
           const store = tx.objectStore(CONFIG.STORE_NAME);
-
-          cloudRecords.forEach(r => {
-            r.sincronizado = true;
-            store.put(r);
-          });
-
+          cloudRecords.forEach(r => { r.sincronizado = true; store.put(r); });
           tx.oncomplete = () => resolve(true);
           tx.onerror = (e) => reject(e.target.error);
         });
       },
-
       async getAllRecords() {
         return new Promise((resolve, reject) => {
           const tx = this.db.transaction([CONFIG.STORE_NAME], 'readonly');
@@ -1507,33 +1525,25 @@
           req.onerror = (e) => reject(e.target.error);
         });
       },
-
       async getUnsyncedRecords() {
         const records = await this.getAllRecords();
         return records.filter(r => !r.sincronizado);
       },
-
       async markAsSynced(ids) {
         return new Promise((resolve, reject) => {
           const tx = this.db.transaction([CONFIG.STORE_NAME], 'readwrite');
           const store = tx.objectStore(CONFIG.STORE_NAME);
-          
           ids.forEach(id => {
             const req = store.get(id);
             req.onsuccess = (e) => {
               const item = e.target.result;
-              if (item) {
-                item.sincronizado = true;
-                store.put(item);
-              }
+              if (item) { item.sincronizado = true; store.put(item); }
             };
           });
-
           tx.oncomplete = () => resolve(true);
           tx.onerror = (e) => reject(e.target.error);
         });
       },
-
       async deleteRecord(id) {
         return new Promise((resolve, reject) => {
           const tx = this.db.transaction([CONFIG.STORE_NAME], 'readwrite');
@@ -1562,16 +1572,17 @@
         }
       },
 
-      async syncPendingRecords() {
+      // MODIFICADO: Acepta "isManual" para saber si mostrar el cartel molesto o la burbuja silenciosa
+      async syncPendingRecords(isManual = false) {
         if (this.isSyncing) return;
         if (!navigator.onLine) {
-          appToast.show('Sin conexión a Internet. Los datos permanecen guardados en tu teléfono.', 'warning');
+          if (isManual) appToast.show('Sin conexión a Internet. Los datos permanecen guardados en tu teléfono.', 'warning');
           return;
         }
 
         const pending = await LocalDB.getUnsyncedRecords();
         const btn = document.getElementById('btn-sync-now');
-        btn.innerText = '⏳ Sincronizando...';
+        if (isManual) btn.innerText = '⏳ Sincronizando...';
         this.isSyncing = true;
 
         try {
@@ -1580,10 +1591,7 @@
               method: 'POST',
               mode: 'cors',
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({
-                action: 'syncRecords',
-                records: pending
-              })
+              body: JSON.stringify({ action: 'syncRecords', records: pending })
             });
 
             if (response.ok) {
@@ -1593,14 +1601,19 @@
           }
 
           await this.pullFromCloud();
-          appToast.show('Sincronización completa con la base de datos.', 'success');
+          
+          if (isManual) {
+            appToast.show('Sincronización completa con la base de datos.', 'success');
+          } else if (pending.length > 0) {
+            appToast.showSnack('Registros subidos a la nube', '☁️'); // Notificación silenciosa
+          }
 
         } catch (err) {
-          console.warn('Error al sincronizar con Google Apps Script:', err);
-          appToast.show('Hubo un inconveniente al conectar con el servidor.', 'warning');
+          console.warn('Error al sincronizar:', err);
+          if (isManual) appToast.show('Hubo un inconveniente al conectar con el servidor.', 'warning');
         } finally {
           this.isSyncing = false;
-          btn.innerText = '🔄 Sincronizar datos';
+          if (isManual) btn.innerText = '🔄 Sincronizar datos';
           await this.updatePendingUI();
         }
       },
@@ -1626,26 +1639,22 @@
     };
 
     /* ==========================================
-       H. ESTADÍSTICAS Y EXPORTACIÓN EXCEL (.XLSX NATIVO)
+       H. ESTADÍSTICAS Y EXPORTACIÓN EXCEL
        ========================================== */
     const appStatsModal = {
       modalEl: document.getElementById('modal-stats'),
-
       async open() {
         const records = await LocalDB.getAllRecords();
-        
         document.getElementById('stat-total-val').innerText = records.length;
         const synced = records.filter(r => r.sincronizado).length;
         document.getElementById('stat-synced-val').innerText = synced;
         document.getElementById('stat-pending-val').innerText = records.length - synced;
-
         const ages = records.map(r => r.edad).filter(Boolean);
         const avgAge = ages.length > 0 ? Math.round(ages.reduce((a, b) => a + b, 0) / ages.length) : 0;
         document.getElementById('stat-avg-age').innerText = avgAge > 0 ? `${avgAge} años` : '-';
-
+        
         const partidosCount = {};
         const localidadesCount = {};
-
         records.forEach(r => {
           const u = r.ubicacion || {};
           if (u.partido) partidosCount[u.partido] = (partidosCount[u.partido] || 0) + 1;
@@ -1654,43 +1663,31 @@
 
         this.renderCountList('stat-partidos-list', partidosCount);
         this.renderCountList('stat-localidades-list', localidadesCount);
-
         this.modalEl.classList.add('active');
       },
-
       renderCountList(elementId, countMap) {
         const sorted = Object.entries(countMap).sort((a, b) => b[1] - a[1]).slice(0, 4);
         const container = document.getElementById(elementId);
-
         if (sorted.length === 0) {
           container.innerHTML = `<div class="stat-list-item"><span>Sin especificar</span><span>0</span></div>`;
           return;
         }
-
         container.innerHTML = sorted.map(([key, count]) => `
-          <div class="stat-list-item">
-            <span>${key}</span>
-            <span>${count}</span>
-          </div>
+          <div class="stat-list-item"><span>${key}</span><span>${count}</span></div>
         `).join('');
       },
-
-      close() {
-        this.modalEl.classList.remove('active');
-      }
+      close() { this.modalEl.classList.remove('active'); }
     };
 
     const appExport = {
       exportCurrent() {
         if (typeof XLSX === 'undefined') {
-          appToast.show('Se requiere conexión a Internet para descargar el motor de Excel (.xlsx).', 'error');
+          appToast.show('Se requiere conexión a Internet para descargar el motor de Excel.', 'error');
           return;
         }
-
         const recordsToExport = appRecordsView.filteredRecords;
-
         if (!recordsToExport || recordsToExport.length === 0) {
-          appToast.show('No hay registros en pantalla para exportar.', 'warning');
+          appToast.show('No hay registros para exportar.', 'warning');
           return;
         }
 
@@ -1699,8 +1696,8 @@
           return {
             'Nombre': r.nombre || '',
             'Apellido': r.apellido || '',
-            'Contacto / WhatsApp': String(r.telefono || ''),
-            'Edad': r.edad !== null && r.edad !== undefined ? r.edad : '',
+            'Contacto': String(r.telefono || ''),
+            'Edad': r.edad || '',
             'Partido': u.partido || '',
             'Localidad': u.localidad || '',
             'Calle y número': u.direccionOriginal || ''
@@ -1708,29 +1705,15 @@
         });
 
         const ws = XLSX.utils.json_to_sheet(exportData);
-
-        ws['!cols'] = [
-          { wch: 18 },
-          { wch: 18 },
-          { wch: 20 },
-          { wch: 8 },
-          { wch: 22 },
-          { wch: 22 },
-          { wch: 25 }
-        ];
-
+        ws['!cols'] = [{wch: 18}, {wch: 18}, {wch: 20}, {wch: 8}, {wch: 22}, {wch: 22}, {wch: 25}];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Registros");
 
         const isFiltered = appRecordsView.allRecords.length !== recordsToExport.length;
         const dateTag = new Date().toISOString().slice(0, 10);
-        const fileName = isFiltered ? 
-          `MJC_Conect_Filtrados_${dateTag}.xlsx` : 
-          `MJC_Conect_Todos_${dateTag}.xlsx`;
-
+        const fileName = isFiltered ? `MJC_Conect_Filtrados_${dateTag}.xlsx` : `MJC_Conect_Todos_${dateTag}.xlsx`;
         XLSX.writeFile(wb, fileName);
-
-        appToast.show(`${recordsToExport.length} registro(s) exportado(s) a Excel (.xlsx).`, 'success');
+        appToast.show(`${recordsToExport.length} registro(s) exportado(s).`, 'success');
       }
     };
 
@@ -1739,50 +1722,33 @@
        ========================================== */
     const appFormHelper = {
       autoFocusScroll(element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 150);
+        setTimeout(() => { element.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
       }
     };
 
     const appRegistration = {
-      init() {
-        appLocationModal.init();
-      },
-
+      init() { appLocationModal.init(); },
       clearErrors() {
         ['grp-nombre', 'grp-telefono'].forEach(id => {
           document.getElementById(id).classList.remove('has-error');
         });
       },
-
       async handleSubmit(e) {
         e.preventDefault();
         this.clearErrors();
 
         const nombre = document.getElementById('input-nombre').value.trim();
         const telefono = document.getElementById('input-telefono').value.trim();
-
         const apellido = document.getElementById('input-apellido').value.trim();
         const edadVal = document.getElementById('input-edad').value.trim();
         const edad = edadVal ? parseInt(edadVal, 10) : null;
-        
         const partido = appLocationModal.inputPartido.value.trim();
         const localidad = appLocationModal.inputLocalidad.value.trim();
         const calleDireccion = appLocationModal.inputDireccion.value.trim();
 
         let isValid = true;
-
-        if (!nombre) {
-          document.getElementById('grp-nombre').classList.add('has-error');
-          isValid = false;
-        }
-
-        if (!telefono) {
-          document.getElementById('grp-telefono').classList.add('has-error');
-          isValid = false;
-        }
-
+        if (!nombre) { document.getElementById('grp-nombre').classList.add('has-error'); isValid = false; }
+        if (!telefono) { document.getElementById('grp-telefono').classList.add('has-error'); isValid = false; }
         if (!isValid) return;
 
         const normLoc = normalizeText(localidad);
@@ -1796,39 +1762,31 @@
 
         const newRecord = {
           id: IdGenerator.generate(),
-          nombre: nombre,
-          apellido: apellido || '',
-          edad: edad,
-          telefono: telefono,
+          nombre: nombre, apellido: apellido || '', edad: edad, telefono: telefono,
           ubicacion: {
             direccionOriginal: calleDireccion || localidad || '',
             direccionCompleta: direccionCompleta,
-            localidad: localidad || '',
-            partido: partido || '',
-            provincia: provincia,
-            pais: "Argentina",
-            tieneCalleExacta: Boolean(calleDireccion)
+            localidad: localidad || '', partido: partido || '', provincia: provincia,
+            pais: "Argentina", tieneCalleExacta: Boolean(calleDireccion)
           },
-          fechaRegistro: new Date().toISOString(),
-          eventoId: CONFIG.EVENT_ID,
-          sincronizado: false
+          fechaRegistro: new Date().toISOString(), eventoId: CONFIG.EVENT_ID, sincronizado: false
         };
 
         try {
           await LocalDB.saveRecord(newRecord);
           
           if (navigator.onLine && API_CONFIG.autoSync) {
-            appSync.syncPendingRecords();
+            // AQUÍ LLAMAMOS A LA SINCRONIZACIÓN EN MODO SILENCIOSO (isManual = false)
+            appSync.syncPendingRecords(false);
           }
 
           this.resetAndRegisterNew();
           appNavigation.showScreen('view-confirm');
         } catch (err) {
-          appToast.show('Error al guardar el registro en la memoria local.', 'error');
+          appToast.show('Error al guardar en el teléfono.', 'error');
           console.error(err);
         }
       },
-
       resetAndRegisterNew() {
         document.getElementById('registration-form').reset();
         appLocationModal.reset();
@@ -1837,7 +1795,7 @@
     };
 
     /* ==========================================
-       J. INSPECCIÓN DE REGISTROS Y FILTROS (DISEÑO Y FORMATO CORREGIDOS)
+       J. INSPECCIÓN DE REGISTROS Y FILTROS LIMPIOS
        ========================================== */
     const appRecordsView = {
       allRecords: [],
@@ -1845,24 +1803,26 @@
       pendingDeleteId: null,
 
       async loadAndRender() {
-        if (navigator.onLine) {
-          await appSync.pullFromCloud();
-        }
+        if (navigator.onLine) await appSync.pullFromCloud();
         this.allRecords = await LocalDB.getAllRecords();
         this.populateFilterDropdowns();
         this.applyFilters();
       },
 
+      // MODIFICADO: Filtros "A prueba de basura"
       populateFilterDropdowns() {
         const partSelect = document.getElementById('filter-partido');
         
-        // EXTRAEMOS SOLO LOS PARTIDOS DE LOS REGISTROS QUE REALMENTE EXISTEN
-        const partidosRec = this.allRecords
-          .map(r => r.ubicacion?.partido)
-          .map(p => p ? p.trim() : ''); // Limpiamos espacios extra
+        // Creamos un listado de los partidos Oficiales de tu base
+        const dbPartidosValidos = new Set(GEO_DATABASE.map(g => g.partido));
 
-        // Armamos lista única ordenada
-        const partidos = [...new Set(partidosRec.filter(Boolean))].sort();
+        // Extraemos los partidos de los registros y los pasamos por el "filtro limpiador"
+        const partidosLimpios = this.allRecords
+          .map(r => r.ubicacion?.partido)
+          .map(p => p ? p.trim() : '')
+          .filter(p => dbPartidosValidos.has(p)); // Si está mal escrito, lo descarta del filtro
+
+        const partidos = [...new Set(partidosLimpios)].sort();
         
         partSelect.innerHTML = '<option value="">Partido: Todos</option>' + 
           partidos.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -1873,24 +1833,29 @@
       onPartidoChange() {
         const selectedPart = document.getElementById('filter-partido').value;
         const locSelect = document.getElementById('filter-localidad');
+        
+        // Creamos un listado de Localidades Oficiales
+        const dbLocalidadesValidas = new Set(GEO_DATABASE.map(g => g.localidad));
 
         let localidades = [];
         
         if (selectedPart) {
-          // Extraemos localidades SOLO de los registros que coinciden con el partido
-          const locsRec = this.allRecords
+          // Extraemos localidades del partido, y aplicamos el "filtro limpiador"
+          const locsLimpias = this.allRecords
             .filter(r => (r.ubicacion?.partido || '').trim() === selectedPart)
             .map(r => r.ubicacion?.localidad)
-            .map(l => l ? l.trim() : '');
+            .map(l => l ? l.trim() : '')
+            .filter(l => dbLocalidadesValidas.has(l));
           
-          localidades = [...new Set(locsRec.filter(Boolean))].sort();
+          localidades = [...new Set(locsLimpias)].sort();
         } else {
-          // Si no hay partido seleccionado, extraemos TODAS las localidades de los registros
-          const locsRec = this.allRecords
+          // Extraemos todas las localidades, y aplicamos el "filtro limpiador"
+          const locsLimpias = this.allRecords
             .map(r => r.ubicacion?.localidad)
-            .map(l => l ? l.trim() : '');
+            .map(l => l ? l.trim() : '')
+            .filter(l => dbLocalidadesValidas.has(l));
 
-          localidades = [...new Set(locsRec.filter(Boolean))].sort();
+          localidades = [...new Set(locsLimpias)].sort();
         }
 
         locSelect.innerHTML = '<option value="">Localidad: Todas</option>' + 
@@ -1910,19 +1875,15 @@
           const mApellido = !fApellido || normalizeText(r.apellido).includes(fApellido);
           const mPart = !fPart || ((r.ubicacion?.partido || '').trim() === fPart);
           const mLoc = !fLoc || ((r.ubicacion?.localidad || '').trim() === fLoc);
-
           return mNombre && mApellido && mPart && mLoc;
         });
 
-        // Ordenamos para que los nuevos registros salgan arriba
         this.filteredRecords.sort((a,b) => new Date(b.fechaRegistro) - new Date(a.fechaRegistro));
-
         this.renderList(this.filteredRecords);
       },
 
       renderList(records) {
         const container = document.getElementById('records-container');
-
         if (records.length === 0) {
           container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:2rem; grid-column: 1 / -1;">No se encontraron registros.</div>`;
           return;
@@ -1936,15 +1897,12 @@
               dateStr = parsedDate.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
             }
           }
-
           const u = r.ubicacion || {};
           const statusIcon = r.sincronizado ? '☁️ Sincronizado' : '📱 Local';
-
           const nombreCompleto = `${r.nombre || ''} ${r.apellido || ''}`.trim() || 'Sin Nombre';
           const edadText = (r.edad !== null && r.edad !== undefined && r.edad !== '' && !isNaN(r.edad)) ? `Edad: ${r.edad} años` : '';
           const telText = r.telefono ? `Tel: ${r.telefono}` : '';
           const detallesRow = [edadText, telText].filter(Boolean).join(' • ');
-
           const direccionMostrar = u.direccionCompleta || u.direccionOriginal || 'Sin especificar';
 
           return `
@@ -1976,48 +1934,33 @@
 
       async confirmDelete() {
         if (!this.pendingDeleteId) return;
-        
         const idToDelete = this.pendingDeleteId;
         this.closeDeleteModal();
 
-        // Si no hay red, lo borramos de la vista local nada más
         if (!navigator.onLine) {
           await LocalDB.deleteRecord(idToDelete);
-          appToast.show('Borrado localmente (Sin conexión a la nube).', 'info');
+          appToast.showSnack('Borrado localmente (Modo Offline)', '🗑️');
           await this.loadAndRender();
           appSync.updatePendingUI();
           return;
         }
 
-        // Si hay red, mandamos la orden de borrar a Google Sheets
         try {
-          appToast.show('Enviando orden de borrado a Google Sheets...', 'info');
-          
+          appToast.showSnack('Eliminando en la nube...', '⏳');
           const response = await fetch(API_CONFIG.webAppUrl, {
-            method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ 
-              action: 'deleteRecord', 
-              id: idToDelete 
-            })
+            method: 'POST', mode: 'cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'deleteRecord', id: idToDelete })
           });
-          
           const result = await response.json();
-          
-          // Revisamos si Google Sheets confirma que lo borró
           if (result.status === 'success') {
-            await LocalDB.deleteRecord(idToDelete); // Borramos del teléfono
-            appToast.show('¡Registro eliminado completamente de la base!', 'success');
+            await LocalDB.deleteRecord(idToDelete);
+            appToast.showSnack('Eliminado completamente', '✅');
           } else {
-            appToast.show('La nube rechazó la orden. ¿Actualizaste la "Nueva Versión" del script?', 'error');
+            appToast.show('Error al borrar en la nube', 'error');
           }
         } catch (err) {
-          console.warn('Error al borrar en la nube:', err);
-          appToast.show('Hubo un error de conexión con la planilla.', 'error');
+          appToast.show('Error de conexión', 'error');
         }
-
-        // Recargamos la pantalla
         await this.loadAndRender();
         appSync.updatePendingUI();
       }
@@ -2033,12 +1976,8 @@
         'view-confirm': document.getElementById('screen-confirm'),
         'view-records': document.getElementById('screen-records')
       },
-
       showScreen(key) {
-        Object.keys(this.screens).forEach(k => {
-          this.screens[k].classList.toggle('active', k === key);
-        });
-
+        Object.keys(this.screens).forEach(k => { this.screens[k].classList.toggle('active', k === key); });
         if (key === 'view-home') appSync.updatePendingUI();
         if (key === 'view-records') appRecordsView.loadAndRender();
         window.scrollTo(0, 0);
@@ -2050,15 +1989,10 @@
        ========================================== */
     document.addEventListener('DOMContentLoaded', async () => {
       appPWA.init();
-
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js')
-          .then((reg) => console.log('Service Worker registrado:', reg.scope))
-          .catch((err) => console.error('Error Service Worker:', err));
+        navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
       }
-
       window.addEventListener('keydown', (e) => appAdmin.handleKeyDown(e));
-
       setTimeout(() => {
         const splash = document.getElementById('splash-screen');
         if (splash) splash.classList.add('fade-out');
@@ -2070,7 +2004,7 @@
 
       window.addEventListener('online', () => {
         appSync.updatePendingUI();
-        appSync.syncPendingRecords();
+        appSync.syncPendingRecords(false); // Sincroniza silenciosamente al volver internet
       });
       window.addEventListener('offline', () => appSync.updatePendingUI());
     });
