@@ -759,7 +759,7 @@
 </head>
 <body>
 
-  <!-- PANTALLA DE BIENVENIDA (SPLASH SCREEN) -->
+  <!-- PANTALLA DE BIENVENIDA -->
   <div id="splash-screen">
     <div class="splash-center">
       <img src="https://raw.githubusercontent.com/GealFox/App-MJC-Conect/refs/heads/main/MJC-Logo.png" alt="MJC Conect Logo" class="splash-logo">
@@ -768,7 +768,7 @@
     <div class="splash-credits">Creado por Gonzalo Abregú</div>
   </div>
 
-  <!-- NOTIFICACIÓN TIPO BURBUJA (SNACKBAR) PARA NO MOLESTAR AL USUARIO -->
+  <!-- NOTIFICACIÓN TIPO BURBUJA (SNACKBAR) PARA SINCRO SILENCIOSA -->
   <div id="snack-bar">
     <span id="snack-icon">☁️</span> <span id="snack-text">Guardado en la nube</span>
   </div>
@@ -809,7 +809,6 @@
           <span class="pending-count-text" id="sync-pending-text">Envíos pendientes: 0</span>
           <span id="sync-network-badge" class="status-badge online">🟢 Conectado</span>
         </div>
-        <!-- ACÁ LE PASAMOS "true" PARA INDICAR QUE EL USUARIO TOCÓ EL BOTÓN MANUALMENTE -->
         <button id="btn-sync-now" class="btn btn-outline" style="min-height: 40px; font-size: 0.875rem;" onclick="appSync.syncPendingRecords(true)">
           🔄 Sincronizar datos
         </button>
@@ -1088,7 +1087,7 @@
       EVENT_ID: 'CAMPAÑA_2026'
     };
 
-    // BASE DE DATOS DE ZONAS (Oficial para mantener los filtros limpios)
+    // BASE DE DATOS DE ZONAS OFICIALES
     const GEO_DATABASE = [
       { localidad: "Ingeniero Maschwitz", partido: "Escobar", provincia: "Buenos Aires", aliases: ["maschwitz", "matchwich", "maswitz"] },
       { localidad: "Garín", partido: "Escobar", provincia: "Buenos Aires", aliases: ["garin", "galin"] },
@@ -1125,6 +1124,25 @@
     ];
 
     /* ==========================================
+       D. HELPER DE NORMALIZACIÓN Y ID
+       ========================================== */
+    const IdGenerator = {
+      generate() {
+        const chars = 'ABCDEF0123456789';
+        let result = '';
+        for (let i = 0; i < 8; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return `PER-${result}`;
+      }
+    };
+
+    function normalizeText(str) {
+      if (!str) return '';
+      return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+    }
+
+    /* ==========================================
        B. INSTALACIÓN PWA
        ========================================== */
     const appPWA = {
@@ -1157,72 +1175,35 @@
     };
 
     /* ==========================================
-       C. SISTEMA DE NOTIFICACIONES (BLOQUEANTES Y BURBUJAS)
+       C. SISTEMA DE NOTIFICACIONES
        ========================================== */
     const appToast = {
       modalEl: document.getElementById('modal-msg'),
-
       show(message, type = 'info', title = null) {
         const iconEl = document.getElementById('msg-icon');
         const titleEl = document.getElementById('msg-title');
         const bodyEl = document.getElementById('msg-body');
 
         if (type === 'success') {
-          iconEl.innerText = '✓';
-          iconEl.style.color = 'var(--success)';
-          titleEl.innerText = title || 'Operación Exitosa';
+          iconEl.innerText = '✓'; iconEl.style.color = 'var(--success)'; titleEl.innerText = title || 'Operación Exitosa';
         } else if (type === 'warning' || type === 'error') {
-          iconEl.innerText = '⚠️';
-          iconEl.style.color = 'var(--danger)';
-          titleEl.innerText = title || 'Atención';
+          iconEl.innerText = '⚠️'; iconEl.style.color = 'var(--danger)'; titleEl.innerText = title || 'Atención';
         } else {
-          iconEl.innerText = 'ℹ️';
-          iconEl.style.color = 'var(--primary)';
-          titleEl.innerText = title || 'Aviso';
+          iconEl.innerText = 'ℹ️'; iconEl.style.color = 'var(--primary)'; titleEl.innerText = title || 'Aviso';
         }
 
         bodyEl.innerText = message;
         this.modalEl.classList.add('active');
       },
-
-      closeMsg() {
-        this.modalEl.classList.remove('active');
-      },
-
-      // NUEVO: Burbuja no intrusiva para procesos de fondo
+      closeMsg() { this.modalEl.classList.remove('active'); },
       showSnack(message, icon = '☁️') {
         const snack = document.getElementById('snack-bar');
         document.getElementById('snack-text').innerText = message;
         document.getElementById('snack-icon').innerText = icon;
         snack.classList.add('show');
-        
-        setTimeout(() => {
-          snack.classList.remove('show');
-        }, 3000);
+        setTimeout(() => { snack.classList.remove('show'); }, 3000);
       }
     };
-
-    /* ==========================================
-       D. HELPER DE NORMALIZACIÓN Y ID
-       ========================================== */
-    const IdGenerator = {
-      generate() {
-        const chars = 'ABCDEF0123456789';
-        let result = '';
-        for (let i = 0; i < 8; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return `PER-${result}`;
-      }
-    };
-
-    function normalizeText(str) {
-      if (!str) return '';
-      return str
-        .toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]/g, "");
-    }
 
     /* ==========================================
        E. AUTENTICACIÓN ADMIN SERVIDOR Y TECLADO
@@ -1232,109 +1213,65 @@
       currentPin: '',
 
       handleRecordsClick() {
-        if (this.isAdmin) {
-          appNavigation.showScreen('view-records');
-        } else {
-          this.openPinModal();
-        }
+        if (this.isAdmin) appNavigation.showScreen('view-records');
+        else this.openPinModal();
       },
-
       openPinModal() {
-        this.currentPin = '';
-        this.updatePinDots();
+        this.currentPin = ''; this.updatePinDots();
         document.getElementById('pin-error-text').style.display = 'none';
         document.getElementById('modal-admin-pin').classList.add('active');
       },
-
-      closePinModal() {
-        document.getElementById('modal-admin-pin').classList.remove('active');
-      },
-
+      closePinModal() { document.getElementById('modal-admin-pin').classList.remove('active'); },
       pressPin(digit) {
         if (this.currentPin.length < 4) {
-          this.currentPin += digit;
-          this.updatePinDots();
-
-          if (this.currentPin.length === 4) {
-            setTimeout(() => this.verifyPin(), 100);
-          }
+          this.currentPin += digit; this.updatePinDots();
+          if (this.currentPin.length === 4) setTimeout(() => this.verifyPin(), 100);
         }
       },
-
       deletePin() {
         if (this.currentPin.length > 0) {
-          this.currentPin = this.currentPin.slice(0, -1);
-          this.updatePinDots();
+          this.currentPin = this.currentPin.slice(0, -1); this.updatePinDots();
         }
       },
-
-      clearPin() {
-        this.currentPin = '';
-        this.updatePinDots();
-      },
-
+      clearPin() { this.currentPin = ''; this.updatePinDots(); },
       updatePinDots() {
         for (let i = 0; i < 4; i++) {
           const dot = document.getElementById(`dot-${i}`);
           dot.classList.toggle('filled', i < this.currentPin.length);
         }
       },
-
       handleKeyDown(e) {
         const modal = document.getElementById('modal-admin-pin');
         if (!modal || !modal.classList.contains('active')) return;
-
-        if (e.key >= '0' && e.key <= '9') {
-          this.pressPin(e.key);
-        } else if (e.key === 'Backspace') {
-          this.deletePin();
-        } else if (e.key === 'Escape') {
-          this.closePinModal();
-        } else if (e.key.toLowerCase() === 'c') {
-          this.clearPin();
-        }
+        if (e.key >= '0' && e.key <= '9') this.pressPin(e.key);
+        else if (e.key === 'Backspace') this.deletePin();
+        else if (e.key === 'Escape') this.closePinModal();
+        else if (e.key.toLowerCase() === 'c') this.clearPin();
       },
-
       async verifyPin() {
         if (!navigator.onLine) {
           const errEl = document.getElementById('pin-error-text');
-          errEl.innerText = 'Se requiere conexión a Internet para validar el PIN';
-          errEl.style.display = 'block';
-          this.clearPin();
-          return;
+          errEl.innerText = 'Se requiere conexión a Internet para validar el PIN'; errEl.style.display = 'block';
+          this.clearPin(); return;
         }
-
-        const errEl = document.getElementById('pin-error-text');
-        errEl.style.display = 'none';
-
+        const errEl = document.getElementById('pin-error-text'); errEl.style.display = 'none';
         try {
           const response = await fetch(API_CONFIG.webAppUrl, {
-            method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            method: 'POST', mode: 'cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: 'verifyPin', pin: this.currentPin })
           });
-
           const data = await response.json();
-
           if (data.status === 'success' && data.valid === true) {
             this.isAdmin = true;
             document.getElementById('admin-indicator').style.display = 'inline-flex';
-            this.closePinModal();
-            appNavigation.showScreen('view-records');
+            this.closePinModal(); appNavigation.showScreen('view-records');
           } else {
-            errEl.innerText = 'PIN Incorrecto';
-            errEl.style.display = 'block';
-            this.clearPin();
+            errEl.innerText = 'PIN Incorrecto'; errEl.style.display = 'block'; this.clearPin();
           }
         } catch (err) {
-          console.error('Error al validar PIN:', err);
-          errEl.innerText = 'Error al conectar con el servidor';
-          errEl.style.display = 'block';
-          this.clearPin();
+          errEl.innerText = 'Error al conectar con el servidor'; errEl.style.display = 'block'; this.clearPin();
         }
       },
-
       logout() {
         this.isAdmin = false;
         document.getElementById('admin-indicator').style.display = 'none';
@@ -1359,22 +1296,12 @@
         this.inputLocalidad.addEventListener('input', (e) => this.handleLocalidadInput(e.target.value));
 
         document.addEventListener('click', (e) => {
-          if (!this.inputPartido.contains(e.target) && !this.dropPartido.contains(e.target)) {
-            this.dropPartido.style.display = 'none';
-          }
-          if (!this.inputLocalidad.contains(e.target) && !this.dropLocalidad.contains(e.target)) {
-            this.dropLocalidad.style.display = 'none';
-          }
+          if (!this.inputPartido.contains(e.target) && !this.dropPartido.contains(e.target)) this.dropPartido.style.display = 'none';
+          if (!this.inputLocalidad.contains(e.target) && !this.dropLocalidad.contains(e.target)) this.dropLocalidad.style.display = 'none';
         });
       },
-
       open() { this.modalEl.classList.add('active'); },
-
-      close() {
-        this.modalEl.classList.remove('active');
-        this.updateSummary();
-      },
-
+      close() { this.modalEl.classList.remove('active'); this.updateSummary(); },
       confirm() { this.close(); },
 
       updateSummary() {
@@ -1396,42 +1323,29 @@
 
       handlePartidoInput(query) {
         const normQ = normalizeText(query);
-        if (!normQ) {
-          this.dropPartido.style.display = 'none';
-          return;
-        }
+        if (!normQ) { this.dropPartido.style.display = 'none'; return; }
 
         const partidosUnicos = [...new Set(GEO_DATABASE.map(item => item.partido))];
         const matches = partidosUnicos.filter(p => normalizeText(p).includes(normQ));
 
-        if (matches.length === 0) {
-          this.dropPartido.style.display = 'none';
-          return;
-        }
+        if (matches.length === 0) { this.dropPartido.style.display = 'none'; return; }
 
         this.dropPartido.innerHTML = matches.map(partido => `
           <div class="autocomplete-item" onclick="appLocationModal.selectPartido('${partido}')">
             <span class="item-main">${partido}</span>
-          </div>
-        `).join('');
-
+          </div>`).join('');
         this.dropPartido.style.display = 'block';
       },
 
       selectPartido(partido) {
-        this.inputPartido.value = partido;
-        this.dropPartido.style.display = 'none';
+        this.inputPartido.value = partido; this.dropPartido.style.display = 'none';
       },
 
       handleLocalidadInput(query) {
         const normQ = normalizeText(query);
-        if (!normQ) {
-          this.dropLocalidad.style.display = 'none';
-          return;
-        }
+        if (!normQ) { this.dropLocalidad.style.display = 'none'; return; }
 
         const normCurrentPartido = normalizeText(this.inputPartido.value);
-
         let matches = GEO_DATABASE.filter(item => {
           const matchLoc = normalizeText(item.localidad).includes(normQ);
           const matchPart = normalizeText(item.partido).includes(normQ);
@@ -1447,10 +1361,7 @@
           });
         }
 
-        if (matches.length === 0) {
-          this.dropLocalidad.style.display = 'none';
-          return;
-        }
+        if (matches.length === 0) { this.dropLocalidad.style.display = 'none'; return; }
 
         this.dropLocalidad.innerHTML = matches.map(item => `
           <div class="autocomplete-item" onclick="appLocationModal.selectLocalidad('${item.localidad}', '${item.partido}')">
@@ -1458,29 +1369,24 @@
               <div class="item-main">${item.localidad}</div>
               <div class="item-sub">Partido: ${item.partido}</div>
             </div>
-          </div>
-        `).join('');
-
+          </div>`).join('');
         this.dropLocalidad.style.display = 'block';
       },
 
       selectLocalidad(localidad, partido) {
-        this.inputLocalidad.value = localidad;
-        this.inputPartido.value = partido;
+        this.inputLocalidad.value = localidad; this.inputPartido.value = partido;
         this.dropLocalidad.style.display = 'none';
       },
 
       reset() {
-        this.inputPartido.value = '';
-        this.inputLocalidad.value = '';
-        this.inputDireccion.value = '';
+        this.inputPartido.value = ''; this.inputLocalidad.value = ''; this.inputDireccion.value = '';
         this.summaryText.innerText = 'Tocar para seleccionar partido/localidad';
         this.summaryText.style.color = 'var(--text-dark)';
       }
     };
 
     /* ==========================================
-       G. PERSISTENCIA INDEXEDDB Y SINCRONIZACIÓN
+       G. PERSISTENCIA INDEXEDDB Y AUTOSANACIÓN
        ========================================== */
     const LocalDB = {
       db: null,
@@ -1516,15 +1422,47 @@
           tx.onerror = (e) => reject(e.target.error);
         });
       },
+
+      // ACÁ SUCEDE LA MAGIA DE LA "AUTOSANACIÓN"
       async getAllRecords() {
         return new Promise((resolve, reject) => {
           const tx = this.db.transaction([CONFIG.STORE_NAME], 'readonly');
           const store = tx.objectStore(CONFIG.STORE_NAME);
           const req = store.getAll();
-          req.onsuccess = () => resolve(req.result || []);
+          req.onsuccess = () => {
+            const records = req.result || [];
+            
+            // Creamos una lista de los Partidos correctos según nuestra base oficial
+            const dbPartidosValidos = new Set(GEO_DATABASE.map(g => normalizeText(g.partido)));
+            
+            records.forEach(r => {
+              if (r.ubicacion && r.ubicacion.partido) {
+                const normPart = normalizeText(r.ubicacion.partido);
+                
+                // Si la NUBE nos mandó los datos cruzados (detecta si el partido es falso/es una localidad)
+                if (!dbPartidosValidos.has(normPart)) {
+                  // Busca en la base de datos si esa palabra en realidad era una localidad (ej. "Villa de Mayo")
+                  const matchGeo = GEO_DATABASE.find(g => normalizeText(g.localidad) === normPart);
+                  
+                  if (matchGeo) {
+                    // Rescatamos la calle si por error se había guardado en localidad
+                    if (r.ubicacion.localidad && normalizeText(r.ubicacion.localidad) !== normPart) {
+                       r.ubicacion.direccionOriginal = r.ubicacion.localidad;
+                    }
+                    // Acomodamos cada cosa en su lugar automáticamente!
+                    r.ubicacion.localidad = matchGeo.localidad;
+                    r.ubicacion.partido = matchGeo.partido;
+                  }
+                }
+              }
+            });
+
+            resolve(records);
+          };
           req.onerror = (e) => reject(e.target.error);
         });
       },
+
       async getUnsyncedRecords() {
         const records = await this.getAllRecords();
         return records.filter(r => !r.sincronizado);
@@ -1564,15 +1502,12 @@
         
         const badge = document.getElementById('sync-network-badge');
         if (navigator.onLine) {
-          badge.className = "status-badge online";
-          badge.innerText = "🟢 Conectado";
+          badge.className = "status-badge online"; badge.innerText = "🟢 Conectado";
         } else {
-          badge.className = "status-badge offline";
-          badge.innerText = "🔴 Modo Offline";
+          badge.className = "status-badge offline"; badge.innerText = "🔴 Modo Offline";
         }
       },
 
-      // MODIFICADO: Acepta "isManual" para saber si mostrar el cartel molesto o la burbuja silenciosa
       async syncPendingRecords(isManual = false) {
         if (this.isSyncing) return;
         if (!navigator.onLine) {
@@ -1588,12 +1523,9 @@
         try {
           if (pending.length > 0) {
             const response = await fetch(API_CONFIG.webAppUrl, {
-              method: 'POST',
-              mode: 'cors',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              method: 'POST', mode: 'cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
               body: JSON.stringify({ action: 'syncRecords', records: pending })
             });
-
             if (response.ok) {
               const syncedIds = pending.map(p => p.id);
               await LocalDB.markAsSynced(syncedIds);
@@ -1605,9 +1537,8 @@
           if (isManual) {
             appToast.show('Sincronización completa con la base de datos.', 'success');
           } else if (pending.length > 0) {
-            appToast.showSnack('Registros subidos a la nube', '☁️'); // Notificación silenciosa
+            appToast.showSnack('Registros subidos a la nube', '☁️'); 
           }
-
         } catch (err) {
           console.warn('Error al sincronizar:', err);
           if (isManual) appToast.show('Hubo un inconveniente al conectar con el servidor.', 'warning');
@@ -1622,12 +1553,9 @@
         if (!navigator.onLine) return;
         try {
           const response = await fetch(API_CONFIG.webAppUrl, {
-            method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            method: 'POST', mode: 'cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: 'getRecords' })
           });
-
           const data = await response.json();
           if (data.status === 'success' && Array.isArray(data.records)) {
             await LocalDB.saveBatchFromCloud(data.records);
@@ -1644,7 +1572,7 @@
     const appStatsModal = {
       modalEl: document.getElementById('modal-stats'),
       async open() {
-        const records = await LocalDB.getAllRecords();
+        const records = await LocalDB.getAllRecords(); // Ya trae los datos sanados
         document.getElementById('stat-total-val').innerText = records.length;
         const synced = records.filter(r => r.sincronizado).length;
         document.getElementById('stat-synced-val').innerText = synced;
@@ -1682,13 +1610,11 @@
     const appExport = {
       exportCurrent() {
         if (typeof XLSX === 'undefined') {
-          appToast.show('Se requiere conexión a Internet para descargar el motor de Excel.', 'error');
-          return;
+          appToast.show('Se requiere conexión a Internet para descargar el motor de Excel.', 'error'); return;
         }
         const recordsToExport = appRecordsView.filteredRecords;
         if (!recordsToExport || recordsToExport.length === 0) {
-          appToast.show('No hay registros para exportar.', 'warning');
-          return;
+          appToast.show('No hay registros para exportar.', 'warning'); return;
         }
 
         const exportData = recordsToExport.map(r => {
@@ -1776,8 +1702,7 @@
           await LocalDB.saveRecord(newRecord);
           
           if (navigator.onLine && API_CONFIG.autoSync) {
-            // AQUÍ LLAMAMOS A LA SINCRONIZACIÓN EN MODO SILENCIOSO (isManual = false)
-            appSync.syncPendingRecords(false);
+            appSync.syncPendingRecords(false); // Sincroniza silencioso
           }
 
           this.resetAndRegisterNew();
@@ -1795,7 +1720,7 @@
     };
 
     /* ==========================================
-       J. INSPECCIÓN DE REGISTROS Y FILTROS LIMPIOS
+       J. INSPECCIÓN DE REGISTROS Y FILTROS
        ========================================== */
     const appRecordsView = {
       allRecords: [],
@@ -1804,25 +1729,17 @@
 
       async loadAndRender() {
         if (navigator.onLine) await appSync.pullFromCloud();
-        this.allRecords = await LocalDB.getAllRecords();
+        this.allRecords = await LocalDB.getAllRecords(); // Ya trae los datos sanados
         this.populateFilterDropdowns();
         this.applyFilters();
       },
 
-      // MODIFICADO: Filtros "A prueba de basura"
       populateFilterDropdowns() {
         const partSelect = document.getElementById('filter-partido');
         
-        // Creamos un listado de los partidos Oficiales de tu base
-        const dbPartidosValidos = new Set(GEO_DATABASE.map(g => g.partido));
-
-        // Extraemos los partidos de los registros y los pasamos por el "filtro limpiador"
-        const partidosLimpios = this.allRecords
-          .map(r => r.ubicacion?.partido)
-          .map(p => p ? p.trim() : '')
-          .filter(p => dbPartidosValidos.has(p)); // Si está mal escrito, lo descarta del filtro
-
-        const partidos = [...new Set(partidosLimpios)].sort();
+        // Sacamos los partidos directo de nuestros registros ya reparados
+        const partidosRec = this.allRecords.map(r => r.ubicacion?.partido).map(p => p ? p.trim() : '');
+        const partidos = [...new Set(partidosRec.filter(Boolean))].sort();
         
         partSelect.innerHTML = '<option value="">Partido: Todos</option>' + 
           partidos.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -1834,29 +1751,19 @@
         const selectedPart = document.getElementById('filter-partido').value;
         const locSelect = document.getElementById('filter-localidad');
         
-        // Creamos un listado de Localidades Oficiales
-        const dbLocalidadesValidas = new Set(GEO_DATABASE.map(g => g.localidad));
-
-        let localidades = [];
-        
+        let locsRec = [];
         if (selectedPart) {
-          // Extraemos localidades del partido, y aplicamos el "filtro limpiador"
-          const locsLimpias = this.allRecords
+          locsRec = this.allRecords
             .filter(r => (r.ubicacion?.partido || '').trim() === selectedPart)
             .map(r => r.ubicacion?.localidad)
-            .map(l => l ? l.trim() : '')
-            .filter(l => dbLocalidadesValidas.has(l));
-          
-          localidades = [...new Set(locsLimpias)].sort();
+            .map(l => l ? l.trim() : '');
         } else {
-          // Extraemos todas las localidades, y aplicamos el "filtro limpiador"
-          const locsLimpias = this.allRecords
+          locsRec = this.allRecords
             .map(r => r.ubicacion?.localidad)
-            .map(l => l ? l.trim() : '')
-            .filter(l => dbLocalidadesValidas.has(l));
-
-          localidades = [...new Set(locsLimpias)].sort();
+            .map(l => l ? l.trim() : '');
         }
+
+        const localidades = [...new Set(locsRec.filter(Boolean))].sort();
 
         locSelect.innerHTML = '<option value="">Localidad: Todas</option>' + 
           localidades.map(l => `<option value="${l}">${l}</option>`).join('');
@@ -1923,13 +1830,10 @@
       },
 
       openDeleteModal(id) {
-        this.pendingDeleteId = id;
-        document.getElementById('modal-confirm-delete').classList.add('active');
+        this.pendingDeleteId = id; document.getElementById('modal-confirm-delete').classList.add('active');
       },
-
       closeDeleteModal() {
-        this.pendingDeleteId = null;
-        document.getElementById('modal-confirm-delete').classList.remove('active');
+        this.pendingDeleteId = null; document.getElementById('modal-confirm-delete').classList.remove('active');
       },
 
       async confirmDelete() {
